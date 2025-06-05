@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.MyApplication" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- podés agregar colores si querés -->
+    </style>
+</resources>
