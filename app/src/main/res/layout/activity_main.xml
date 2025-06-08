@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -10,39 +9,37 @@
 
     <View
         android:id="@+id/view2"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:background="#A6000000"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
         android:id="@+id/btn_back"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Volver atrás"
         android:padding="16dp"
         android:src="@drawable/ic_arrow_back"
-        android:tint="@color/white"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="24dp"
-        android:layout_marginStart="8dp" />
+        app:tint="@color/white" />
 
     <TextView
         android:id="@+id/tv_playing_now"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:letterSpacing="0.1"
         android:text="PLAYING NOW"
         android:textColor="@color/white"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:letterSpacing="0.1"
         app:layout_constraintBottom_toBottomOf="@+id/btn_back"
         app:layout_constraintEnd_toStartOf="@+id/btn_import"
         app:layout_constraintStart_toEndOf="@+id/btn_back"
@@ -52,15 +49,15 @@
         android:id="@+id/btn_import"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Agregar a favoritos"
+        android:contentDescription="Importar archivo"
         android:padding="16dp"
         android:src="@drawable/ic_import"
-        android:tint="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="8dp" />
+        app:tint="@color/white" />
 
     <FrameLayout
         android:id="@+id/artist_image_container"
@@ -77,9 +74,9 @@
             android:layout_width="200dp"
             android:layout_height="200dp"
             android:layout_gravity="center"
-            android:scaleType="centerCrop"
             android:background="@drawable/circle_background"
-            android:clipToOutline="true"/>
+            android:clipToOutline="true"
+            android:scaleType="centerCrop" />
 
         <View
             android:layout_width="230dp"
@@ -103,43 +100,11 @@
     </FrameLayout>
 
 
-    <SeekBar
-        android:id="@+id/song_progress_bar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:progressDrawable="@drawable/seekbar_progress"
-        android:thumb="@drawable/seekbar_thumb"
-        android:progress="70"
-        app:layout_constraintBottom_toTopOf="@+id/nombreCliente"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintWidth_percent="0.85"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/tv_current_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="3:20"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        app:layout_constraintStart_toStartOf="@+id/song_progress_bar"
-        app:layout_constraintTop_toBottomOf="@+id/song_progress_bar" />
-
-    <TextView
-        android:id="@+id/tv_total_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="3:37"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        app:layout_constraintEnd_toEndOf="@+id/song_progress_bar"
-        app:layout_constraintTop_toBottomOf="@+id/song_progress_bar" />
-
     <TextView
         android:id="@+id/nombreCliente"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
         android:text="Cliente"
         android:textColor="@color/white"
         android:textSize="28sp"
@@ -147,19 +112,21 @@
         app:layout_constraintBottom_toTopOf="@+id/textoCliente"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginBottom="4dp" />
+        app:layout_constraintTop_toTopOf="@+id/guideline_center"
+        app:layout_constraintVertical_bias="0.555" />
 
     <TextView
         android:id="@+id/textoCliente"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="cliente"
+        android:layout_marginBottom="48dp"
+        android:text="Producto"
         android:textColor="@color/text_light_gray"
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/control_buttons_layout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginBottom="24dp" />
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <ImageButton
         android:id="@+id/btn_repetir"
@@ -167,56 +134,39 @@
         android:layout_height="64dp"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginBottom="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Repetir Pedido"
         android:padding="8dp"
         android:src="@drawable/ic_replay"
-        android:tint="@color/white"
         app:layout_constraintBottom_toBottomOf="@+id/textoCliente"
         app:layout_constraintEnd_toStartOf="@+id/textoCliente"
-        app:layout_constraintHorizontal_bias="0.111"
+        app:layout_constraintHorizontal_bias="0.063"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textoCliente"
-        app:layout_constraintVertical_bias="0.576" />
-
-    <ImageButton
-        android:id="@+id/btn_repeat"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Repetir canción"
-        android:padding="8dp"
-        android:tint="@color/text_light_gray"
-        app:layout_constraintStart_toEndOf="@+id/textoCliente"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="@+id/textoCliente"
-        app:layout_constraintTop_toTopOf="@+id/textoCliente"
-        android:layout_marginStart="8dp" />
-
+        app:layout_constraintVertical_bias="0.0"
+        app:tint="@color/white" />
 
     <LinearLayout
         android:id="@+id/control_buttons_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginTop="164dp"
         android:gravity="center"
-        android:layout_marginBottom="32dp"
-        app:layout_constraintBottom_toTopOf="@+id/btn_lyrics_pull_up"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/guideline_center">
 
         <ImageButton
             android:id="@+id/btn_previous"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Canción anterior"
             android:padding="16dp"
             android:src="@drawable/ic_previous"
-            android:tint="@color/white"
-            android:layout_marginEnd="16dp" />
+            app:tint="@color/white" />
 
         <ImageButton
             android:id="@+id/btn_play_pause"
@@ -226,39 +176,20 @@
             android:contentDescription="Reproducir/Pausar"
             android:padding="20dp"
             android:src="@drawable/ic_play"
-            android:tint="@color/background_dark" />
+            app:tint="@color/background_dark" />
 
         <ImageButton
             android:id="@+id/btn_next"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Siguiente canción"
             android:padding="16dp"
             android:src="@drawable/ic_next"
-            android:tint="@color/white"
-            android:layout_marginStart="16dp" />
+            app:tint="@color/white" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btn_lyrics_pull_up"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="LYRICS"
-        android:textColor="@color/white"
-        android:background="@drawable/rounded_button_background"
-        android:drawableTop="@drawable/ic_arrow_up"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:gravity="center_horizontal|top"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintWidth_percent="0.9"
-        android:layout_marginBottom="16dp"
-        />
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline_center"
         android:layout_width="wrap_content"

@@ -12,7 +12,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.SeekBar;
+
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -49,9 +49,6 @@ public class MainActivity extends AppCompatActivity {
     private ImageView artistImage;
     private ImageView imageView3;
 
-    private SeekBar songProgressBar;
-    private TextView tvCurrentTime;
-    private TextView tvTotalTime;
     private TextView nombreCliente;
     private TextView textoCliente;
     private ImageButton btnShuffle;
@@ -59,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnPrevious;
     private ImageButton btnPlayPause;
     private ImageButton btnNext;
-    private Button btnLyricsPullUp;
+
 
     private AppiService apiService;
     private ActivityResultLauncher<String> selectPdfLauncher;
@@ -90,9 +87,7 @@ public class MainActivity extends AppCompatActivity {
         artistImage = findViewById(R.id.artist_image);
         imageView3 = findViewById(R.id.imageView3);
 
-        songProgressBar = findViewById(R.id.song_progress_bar);
-        tvCurrentTime = findViewById(R.id.tv_current_time);
-        tvTotalTime = findViewById(R.id.tv_total_time);
+
         nombreCliente = findViewById(R.id.nombreCliente);
         textoCliente = findViewById(R.id.textoCliente);
         btnShuffle = findViewById(R.id.btn_repetir);
@@ -102,10 +97,11 @@ public class MainActivity extends AppCompatActivity {
         btnPlayPause = findViewById(R.id.btn_play_pause);
         btnNext = findViewById(R.id.btn_next);
 
-        btnLyricsPullUp = findViewById(R.id.btn_lyrics_pull_up);
+
 
         HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+
 
         OkHttpClient client = new OkHttpClient.Builder()
                 .addInterceptor(logging)
@@ -188,20 +184,6 @@ public class MainActivity extends AppCompatActivity {
             selectPdfLauncher.launch("application/pdf");
         });
 
-        songProgressBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    tvCurrentTime.setText(formatTime(progress, seekBar.getMax()));
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) { }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) { }
-        });
 
         btnPlayPause.setOnClickListener(v -> {
             if (btnPlayPause.getTag() == null || btnPlayPause.getTag().equals("paused")) {
@@ -306,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
         btnPrevious.setEnabled(false);
 
         btnShuffle.setOnClickListener(v -> { Log.d("PedidosApp", "DEBUG_UI_EVENT: Repetir pedido."); });
-        btnLyricsPullUp.setOnClickListener(v -> { Log.d("PedidosApp", "DEBUG_UI_EVENT: Mostrar letras."); });
+
     }
 
 
