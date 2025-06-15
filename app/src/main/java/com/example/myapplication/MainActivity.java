@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://192.168.1.118:8080/") // ¡VERIFICA QUE ESTA IP SEA CORRECTA PARA TU SERVIDOR!
+                .baseUrl("http://192.168.1.148:8080/") // ¡VERIFICA QUE ESTA IP SEA CORRECTA PARA TU SERVIDOR!
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(client)
                 .build();
