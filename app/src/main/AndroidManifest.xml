@@ -26,4 +26,8 @@
             android:theme="@style/Theme.MyApplication">
         </activity>
 
-    </application></manifest>
+    </application>
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+</manifest>

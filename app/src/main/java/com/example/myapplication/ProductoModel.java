@@ -1,12 +1,21 @@
-package com.example.myapplication;
+// ProductoModel.java
+package com.example.myapplication; // Mantenemos tu paquete original
 
-import com.google.gson.annotations.SerializedName;
+// Ya no es necesaria la importación de Gson si no se usa para serialización/deserialización
+// import com.google.gson.annotations.SerializedName;
 
 public class ProductoModel {
-    @SerializedName("cantidad")
+    // Ya no es necesaria la anotación si no se usa Gson
+    // @SerializedName("cantidad")
     private int cantidad;
-    @SerializedName("descripcion")
+    // @SerializedName("descripcion")
     private String descripcion;
+
+    // Constructor añadido para facilitar la creación desde el parser
+    public ProductoModel(int cantidad, String descripcion) {
+        this.cantidad = cantidad;
+        this.descripcion = descripcion;
+    }
 
     public int getCantidad() {
         return cantidad;
@@ -22,5 +31,10 @@ public class ProductoModel {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    @Override
+    public String toString() {
+        return cantidad + " x " + descripcion;
     }
 }

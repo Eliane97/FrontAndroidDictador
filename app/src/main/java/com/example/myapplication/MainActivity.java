@@ -1,46 +1,43 @@
 package com.example.myapplication; // O el nombre de tu paquete si es diferente
 
+import android.Manifest; // Importación necesaria para permisos
 import android.content.Intent;
+import android.content.pm.PackageManager; // Importación necesaria para permisos
 import android.net.Uri;
 import android.os.Bundle;
-import android.speech.tts.TextToSpeech; // Importación necesaria
+import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-
 import android.widget.TextView;
-import android.widget.Toast;
+// import android.widget.Toast; // Si necesitas Toast, descomenta
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.myapplication.AppiService;
-import com.example.myapplication.PedidoModel;
-import com.example.myapplication.ProductoModel;
-import com.example.myapplication.R;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.Locale; // Importación necesaria
+import androidx.core.app.ActivityCompat; // Importación necesaria para permisos
+import androidx.core.content.ContextCompat; // Importación necesaria para permisos
 
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.OkHttpClient;
-import okhttp3.RequestBody;
-import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class MainActivity extends AppCompatActivity {
 
+    // Constante TAG para Logcat, buena práctica
+    private static final String TAG = "MainActivity";
+    // Código para identificar la solicitud de permiso de almacenamiento
+    private static final int REQUEST_READ_STORAGE = 777;
+
+    // Vistas de la UI
     private View viewOverlay;
     private ImageButton btnBack;
     private TextView tvPlayingNow;
@@ -57,16 +54,17 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnPlayPause;
     private ImageButton btnNext;
 
-
-    private AppiService apiService;
+    // Lanzadores y servicios
     private ActivityResultLauncher<String> selectPdfLauncher;
     private TextToSpeech textToSpeech;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
+    // Datos de la aplicación
     private List<PedidoModel> currentPedidosList;
     private int currentPedidoIndex = 0;
     private int currentProductoIndex = 0;
 
-    // Constantes para los IDs de las "utterances"
+    // IDs para el TextToSpeech (para rastrear el progreso del habla)
     private static final String UTTERANCE_ID_CLIENTE = "cliente_name_utterance";
     private static final String UTTERANCE_ID_ITEM = "item_utterance";
     private static final String UTTERANCE_ID_FINAL_LIST = "final_list_utterance";
@@ -77,7 +75,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        PDFBoxResourceLoader.init(getApplicationContext());
+        Log.d(TAG, "PDFBox inicializado correctamente");
 
+
+        // --- 1. Inicialización de Vistas ---
         viewOverlay = findViewById(R.id.view2);
         btnBack = findViewById(R.id.btn_back);
         tvPlayingNow = findViewById(R.id.tv_playing_now);
@@ -86,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
         artistImageContainer = findViewById(R.id.artist_image_container);
         artistImage = findViewById(R.id.artist_image);
         imageView3 = findViewById(R.id.imageView3);
-
 
         nombreCliente = findViewById(R.id.nombreCliente);
         textoCliente = findViewById(R.id.textoCliente);
@@ -97,123 +98,130 @@ public class MainActivity extends AppCompatActivity {
         btnPlayPause = findViewById(R.id.btn_play_pause);
         btnNext = findViewById(R.id.btn_next);
 
+        // --- 2. Solicitud de Permisos ---
+        // Llama a este método al inicio de onCreate para verificar y solicitar el permiso
+        checkStoragePermissions();
 
-
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-
-
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(logging)
-                .build();
-
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://192.168.1.148:8080/") // ¡VERIFICA QUE ESTA IP SEA CORRECTA PARA TU SERVIDOR!
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(client)
-                .build();
-
-        apiService = retrofit.create(AppiService.class);
-
+        // --- 3. Configuración del lanzador de actividad para seleccionar PDF ---
         selectPdfLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
-                        uploadPdfFile(uri);
+                        processPdfLocally(uri);
                     } else {
-                        Log.d("PedidosApp", "DEBUG_PDF_SELECT: No se seleccionó ningún archivo.");
+                        Log.d(TAG, "DEBUG_PDF_SELECT: No se seleccionó ningún archivo.");
                         speakText("No se seleccionó ningún archivo PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
+                        nombreCliente.setText("Selección cancelada"); // Feedback visual
+                        textoCliente.setText("");
                     }
                 }
         );
 
+        // --- 4. Inicialización de TextToSpeech ---
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int result = textToSpeech.setLanguage(new Locale("es", "ES"));
 
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Log.e("PedidosApp", "Idioma no soportado o faltan datos del idioma. Intentando instalarlo.");
+                    Log.e(TAG, "Idioma no soportado o faltan datos del idioma. Intentando instalarlo.");
                     Intent installIntent = new Intent();
                     installIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
                     startActivity(installIntent);
                 } else {
-                    Log.d("PedidosApp", "TextToSpeech inicializado con éxito.");
+                    Log.d(TAG, "TextToSpeech inicializado con éxito.");
                 }
             } else {
-                Log.e("PedidosApp", "Error al inicializar TextToSpeech. Código: " + status);
+                Log.e(TAG, "Error al inicializar TextToSpeech. Código: " + status);
                 speakText("Error al inicializar el motor de voz.", UTTERANCE_ID_ERROR);
+                nombreCliente.setText("Error TTS"); // Feedback visual
+                textoCliente.setText("Revisar motor de voz.");
             }
         });
 
+        // Configuración del listener de progreso de TextToSpeech
         textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override
             public void onStart(String utteranceId) {
-                Log.d("PedidosApp", "TTS: Inicio dictado de '" + utteranceId + "'");
+                Log.d(TAG, "TTS: Inicio dictado de '" + utteranceId + "'");
             }
 
             @Override
             public void onDone(String utteranceId) {
-                Log.d("PedidosApp", "TTS: Fin dictado de '" + utteranceId + "'");
-                // Si el dictado del cliente terminó, podemos reproducir el primer ítem
+                Log.d(TAG, "TTS: Fin dictado de '" + utteranceId + "'");
                 if (utteranceId.equals(UTTERANCE_ID_CLIENTE)) {
-                    // Asegurarse de que esto se ejecuta en el hilo principal
                     runOnUiThread(() -> displayAndSpeakCurrentItem());
                 }
             }
 
             @Override
             public void onError(String utteranceId) {
-                Log.e("PedidosApp", "TTS: Error en dictado de '" + utteranceId + "'");
+                Log.e(TAG, "TTS: Error en dictado de '" + utteranceId + "'");
+                nombreCliente.setText("Error de voz"); // Feedback visual
+                textoCliente.setText("Intente de nuevo.");
             }
 
             @Override
             public void onStop(String utteranceId, boolean interrupted) {
-                Log.d("PedidosApp", "TTS: Detenido dictado de '" + utteranceId + "'. Interrumpido: " + interrupted);
+                Log.d(TAG, "TTS: Detenido dictado de '" + utteranceId + "'. Interrumpido: " + interrupted);
             }
 
             @Override
             public void onRangeStart(String utteranceId, int start, int end, int frame) { /* No es necesario implementar */ }
         });
 
-
+        // --- 5. Configuración de Listeners para los Botones ---
         btnBack.setOnClickListener(v -> onBackPressed());
 
         btnImport.setOnClickListener(v -> {
-            Log.d("PedidosApp", "DEBUG_IMPORT: Seleccionando archivo PDF...");
-            speakText("Seleccionando archivo PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
-            selectPdfLauncher.launch("application/pdf");
+            // Antes de lanzar el selector de PDF, verificamos si tenemos el permiso.
+            // Si el permiso no está concedido, no se lanzará el selector hasta que el usuario lo apruebe.
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "DEBUG_IMPORT: Seleccionando archivo PDF...");
+                speakText("Seleccionando archivo PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("Seleccionando PDF..."); // Feedback visual
+                textoCliente.setText("");
+                selectPdfLauncher.launch("application/pdf");
+            } else {
+                // Si el permiso no está concedido, la solicitud ya se hizo en onCreate.
+                // Aquí solo notificamos al usuario.
+                Log.w(TAG, "DEBUG_IMPORT: Permiso READ_EXTERNAL_STORAGE no concedido. No se puede lanzar el selector de PDF.");
+                speakText("Necesito permiso de almacenamiento para seleccionar un PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("Permiso necesario");
+                textoCliente.setText("Activa el permiso en ajustes.");
+            }
         });
-
 
         btnPlayPause.setOnClickListener(v -> {
             if (btnPlayPause.getTag() == null || btnPlayPause.getTag().equals("paused")) {
-                btnPlayPause.setImageResource(R.drawable.ic_pause);
+                btnPlayPause.setImageResource(R.drawable.ic_pause); // Asegúrate de tener ic_pause
                 btnPlayPause.setTag("playing");
-                Log.d("PedidosApp", "DEBUG_UI_EVENT: Reproduciendo.");
+                Log.d(TAG, "DEBUG_UI_EVENT: Reproduciendo.");
                 if (currentPedidosList != null && !currentPedidosList.isEmpty()) {
-                    Log.d("PedidosApp", "DEBUG_BTN_PLAY: Iniciando dictado del elemento actual.");
-                    // Re-dictar el cliente y luego el item
+                    Log.d(TAG, "DEBUG_BTN_PLAY: Iniciando dictado del elemento actual.");
                     String currentClientName = currentPedidosList.get(currentPedidoIndex).getCliente();
                     speakText("Pedido para el cliente: " + currentClientName + ".", UTTERANCE_ID_CLIENTE);
                 } else {
                     speakText("Cargue un documento para comenzar.", UTTERANCE_ID_GENERAL_MESSAGE);
-                    Log.d("PedidosApp", "DEBUG_BTN_PLAY: Solicitando cargar documento.");
+                    Log.d(TAG, "DEBUG_BTN_PLAY: Solicitando cargar documento.");
                 }
             } else {
-                btnPlayPause.setImageResource(R.drawable.ic_play);
+                btnPlayPause.setImageResource(R.drawable.ic_play); // Asegúrate de tener ic_play
                 btnPlayPause.setTag("paused");
-                Log.d("PedidosApp", "DEBUG_UI_EVENT: Pausado.");
+                Log.d(TAG, "DEBUG_UI_EVENT: Pausado.");
                 if (textToSpeech != null && textToSpeech.isSpeaking()) {
                     textToSpeech.stop();
-                    Log.d("PedidosApp", "DEBUG_TTS_STOP: Pausa, deteniendo dictado.");
+                    Log.d(TAG, "DEBUG_TTS_STOP: Pausa, deteniendo dictado.");
                 }
             }
         });
 
         btnNext.setOnClickListener(v -> {
             if (currentPedidosList == null || currentPedidosList.isEmpty()) {
-                Log.d("PedidosApp", "DEBUG_BTN_NEXT: Lista de pedidos vacía.");
+                Log.d(TAG, "DEBUG_BTN_NEXT: Lista de pedidos vacía.");
                 speakText("No hay pedidos para navegar.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("No hay pedidos"); // Feedback visual
+                textoCliente.setText("");
                 return;
             }
 
@@ -224,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (!productos.isEmpty() && currentProductoIndex < productos.size() - 1) {
                 currentProductoIndex++;
-                Log.d("PedidosApp", "DEBUG_BTN_NEXT: Siguiente artículo dentro del mismo cliente.");
+                Log.d(TAG, "DEBUG_BTN_NEXT: Siguiente artículo dentro del mismo cliente.");
                 displayAndSpeakCurrentItem();
             } else {
                 if (currentPedidoIndex < currentPedidosList.size() - 1) {
@@ -233,24 +241,84 @@ public class MainActivity extends AppCompatActivity {
 
                     if (currentPedidoIndex != oldPedidoIndex) {
                         String clientName = currentPedidosList.get(currentPedidoIndex).getCliente();
-                        Log.d("PedidosApp", "DEBUG_CLIENTE_TTS: Cambiando al cliente: " + clientName);
+                        Log.d(TAG, "DEBUG_CLIENTE_TTS: Cambiando al cliente: " + clientName);
                         speakText("Cambiando al cliente: " + clientName + ".", UTTERANCE_ID_CLIENTE);
                     } else {
-                        Log.d("PedidosApp", "DEBUG_BTN_NEXT: No hay más productos, pero no cambia de cliente o final de lista inminente.");
+                        Log.d(TAG, "DEBUG_BTN_NEXT: No hay más productos en el pedido actual. Llamando a displayAndSpeakCurrentItem para el nuevo cliente o el final.");
                         displayAndSpeakCurrentItem();
                     }
                 } else {
                     speakText("Has llegado al final de todos los pedidos.", UTTERANCE_ID_FINAL_LIST);
-                    Log.d("PedidosApp", "DEBUG_BTN_NEXT: Fin de la lista de pedidos.");
+                    Log.d(TAG, "DEBUG_BTN_NEXT: Fin de la lista de pedidos.");
+                    nombreCliente.setText("Fin de pedidos"); // Feedback visual
+                    textoCliente.setText("No hay más para mostrar.");
+                    btnNext.setEnabled(false);
+                    btnPrevious.setEnabled(true);
                     return;
                 }
             }
+            updateNavigationButtonsState();
         });
+
+
+        btnNext.setOnClickListener(v -> {
+            if (currentPedidosList == null || currentPedidosList.isEmpty()) {
+                Log.d(TAG, "DEBUG_BTN_NEXT: Lista de pedidos vacía.");
+                speakText("No hay pedidos para navegar.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("No hay pedidos"); // Feedback visual
+                textoCliente.setText("");
+                return;
+            }
+
+            int oldPedidoIndex = currentPedidoIndex;
+
+            PedidoModel currentPedido = currentPedidosList.get(currentPedidoIndex);
+            List<ProductoModel> productos = currentPedido.getProductos();
+
+            if (!productos.isEmpty() && currentProductoIndex < productos.size() - 1) {
+                // Caso: Siguiente producto dentro del MISMO pedido.
+                currentProductoIndex++;
+                Log.d(TAG, "DEBUG_BTN_NEXT: Siguiente artículo dentro del mismo cliente.");
+                displayAndSpeakCurrentItem(); // Solo dictar el producto.
+            } else {
+                // Caso: No hay más productos en el pedido actual o es un pedido sin productos.
+                // Mover al siguiente pedido si existe.
+                if (currentPedidoIndex < currentPedidosList.size() - 1) {
+                    currentPedidoIndex++;
+                    currentProductoIndex = 0; // Reiniciar el índice de producto para el nuevo pedido.
+
+                    // --- LÓGICA DE CAMBIO DE PEDIDO: ANUNCIAR EL NUEVO CLIENTE SI EXISTE ---
+                    String nuevoCliente = currentPedidosList.get(currentPedidoIndex).getCliente();
+                    if (nuevoCliente != null && !nuevoCliente.trim().isEmpty()) {
+                        speakText("Siguiente pedido para el cliente: " + nuevoCliente + ".", UTTERANCE_ID_CLIENTE);
+                        Log.d(TAG, "DEBUG_VOZ: Siguiente cliente: " + nuevoCliente);
+                    } else {
+                        speakText("Siguiente pedido sin cliente.", UTTERANCE_ID_CLIENTE);
+                        Log.d(TAG, "DEBUG_VOZ: Siguiente pedido sin cliente.");
+                    }
+                    // displayAndSpeakCurrentItem() se llamará cuando el dictado del cliente termine (onDone).
+
+                } else {
+                    speakText("Has llegado al final de todos los pedidos.", UTTERANCE_ID_FINAL_LIST);
+                    Log.d(TAG, "DEBUG_BTN_NEXT: Fin de la lista de pedidos.");
+                    nombreCliente.setText("Fin de pedidos"); // Feedback visual
+                    textoCliente.setText("No hay más para mostrar.");
+                    btnNext.setEnabled(false);
+                    btnPrevious.setEnabled(true);
+                    return;
+                }
+            }
+            updateNavigationButtonsState();
+        });
+
+// ---
 
         btnPrevious.setOnClickListener(v -> {
             if (currentPedidosList == null || currentPedidosList.isEmpty()) {
-                Log.d("PedidosApp", "DEBUG_BTN_PREVIOUS: Lista de pedidos vacía.");
+                Log.d(TAG, "DEBUG_BTN_PREVIOUS: Lista de pedidos vacía.");
                 speakText("No hay pedidos para navegar.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("No hay pedidos"); // Feedback visual
+                textoCliente.setText("");
                 return;
             }
 
@@ -259,72 +327,226 @@ public class MainActivity extends AppCompatActivity {
             List<ProductoModel> productos = currentPedido.getProductos();
 
             if (!productos.isEmpty() && currentProductoIndex > 0) {
+                // Caso: Producto anterior dentro del MISMO pedido.
                 currentProductoIndex--;
-                Log.d("PedidosApp", "DEBUG_BTN_PREVIOUS: Artículo anterior dentro del mismo cliente.");
-                displayAndSpeakCurrentItem();
+                Log.d(TAG, "DEBUG_BTN_PREVIOUS: Artículo anterior dentro del mismo cliente.");
+                displayAndSpeakCurrentItem(); // Solo dictar el producto.
             } else {
+                // Caso: No hay más productos previos en el pedido actual o es el primer producto.
+                // Mover al pedido anterior si existe.
                 if (currentPedidoIndex > 0) {
                     currentPedidoIndex--;
                     PedidoModel previousPedido = currentPedidosList.get(currentPedidoIndex);
+                    // Si el pedido anterior tiene productos, ir al último producto de ese pedido.
                     currentProductoIndex = previousPedido.getProductos().size() > 0 ? previousPedido.getProductos().size() - 1 : 0;
 
-                    if (currentPedidoIndex != oldPedidoIndex) {
-                        String clientName = currentPedidosList.get(currentPedidoIndex).getCliente();
-                        Log.d("PedidosApp", "DEBUG_CLIENTE_TTS: Regresando al cliente: " + clientName);
-                        speakText("Regresando al cliente: " + clientName + ".", UTTERANCE_ID_CLIENTE);
+                    // --- LÓGICA DE CAMBIO DE PEDIDO: ANUNCIAR EL CLIENTE ANTERIOR SI EXISTE ---
+                    String clienteAnterior = currentPedidosList.get(currentPedidoIndex).getCliente();
+                    if (clienteAnterior != null && !clienteAnterior.trim().isEmpty()) {
+                        speakText("Pedido anterior para el cliente: " + clienteAnterior + ".", UTTERANCE_ID_CLIENTE);
+                        Log.d(TAG, "DEBUG_VOZ: Cliente anterior: " + clienteAnterior);
                     } else {
-                        Log.d("PedidosApp", "DEBUG_BTN_PREVIOUS: No hay más productos, pero no cambia de cliente o inicio de lista inminente.");
-                        displayAndSpeakCurrentItem();
+                        speakText("Pedido anterior sin cliente.", UTTERANCE_ID_CLIENTE);
+                        Log.d(TAG, "DEBUG_VOZ: Pedido anterior sin cliente.");
                     }
+                    // displayAndSpeakCurrentItem() se llamará cuando el dictado del cliente termine (onDone).
+
                 } else {
                     speakText("Has llegado al principio de todos los pedidos.", UTTERANCE_ID_FINAL_LIST);
-                    Log.d("PedidosApp", "DEBUG_BTN_PREVIOUS: Principio de la lista de pedidos.");
+                    Log.d(TAG, "DEBUG_BTN_PREVIOUS: Principio de la lista de pedidos.");
+                    nombreCliente.setText("Inicio de pedidos"); // Feedback visual
+                    textoCliente.setText("No hay más para mostrar.");
+                    btnPrevious.setEnabled(false);
+                    btnNext.setEnabled(true);
                     return;
                 }
             }
+            updateNavigationButtonsState();
         });
 
+        // Estado inicial de los botones
         btnNext.setEnabled(false);
         btnPrevious.setEnabled(false);
 
-        btnShuffle.setOnClickListener(v -> { Log.d("PedidosApp", "DEBUG_UI_EVENT: Repetir pedido."); });
-
+        btnShuffle.setOnClickListener(v -> {
+            Log.d(TAG, "DEBUG_UI_EVENT: Repetir pedido.");
+            if (currentPedidosList != null && !currentPedidosList.isEmpty() &&
+                    currentPedidoIndex >= 0 && currentPedidoIndex < currentPedidosList.size() &&
+                    !currentPedidosList.get(currentPedidoIndex).getProductos().isEmpty() &&
+                    currentProductoIndex >= 0 && currentProductoIndex < currentPedidosList.get(currentPedidoIndex).getProductos().size()) {
+                // Si hay un pedido y un producto válidos, lo repite
+                speakText("Repitiendo: " + nombreCliente.getText().toString() + ". " + textoCliente.getText().toString(), UTTERANCE_ID_GENERAL_MESSAGE);
+            } else {
+                speakText("No hay nada que repetir.", UTTERANCE_ID_GENERAL_MESSAGE);
+                nombreCliente.setText("Nada que repetir"); // Feedback visual
+                textoCliente.setText("");
+            }
+        });
     }
 
-
-
-      //      ### Métodos Auxiliares
-
-   // `speakText` ahora gestiona la cola de reproducción:
-
-
-    private void speakText(String text, String utteranceId) {
-        if (textToSpeech != null && textToSpeech.getEngines().size() > 0) {
-            // Detiene lo que se esté reproduciendo y limpia la cola, luego añade el nuevo texto.
-            // Esto asegura que cada llamada a speakText inicia una nueva secuencia limpia.
-            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
-            Log.d("PedidosApp", "Dictando: '" + text + "' (Utterance ID: " + utteranceId + ")");
+    /**
+     * Verifica y solicita el permiso READ_EXTERNAL_STORAGE si es necesario.
+     */
+    private void checkStoragePermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            // El permiso no ha sido concedido, lo solicitamos
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    REQUEST_READ_STORAGE);
         } else {
-            Log.e("PedidosApp", "TextToSpeech no está inicializado o no hay motores de voz. No se puede dictar: " + text);
+            // El permiso ya está concedido
+            Log.d(TAG, "Permiso READ_EXTERNAL_STORAGE ya concedido.");
         }
     }
 
+    /**
+     * Callback para el resultado de la solicitud de permisos.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_READ_STORAGE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permiso concedido por el usuario
+                Log.d(TAG, "Permiso READ_EXTERNAL_STORAGE concedido.");
+                speakText("Permiso de almacenamiento concedido.", UTTERANCE_ID_GENERAL_MESSAGE);
+            } else {
+                // Permiso denegado por el usuario
+                Log.e(TAG, "Permiso READ_EXTERNAL_STORAGE denegado.");
+                // Informa al usuario que la funcionalidad de importación de PDF no funcionará
+                speakText("Permiso de almacenamiento denegado. No se puede leer el PDF.", UTTERANCE_ID_ERROR);
+                nombreCliente.setText("Permiso Denegado");
+                textoCliente.setText("Activa el permiso en ajustes de la app.");
+            }
+        }
+    }
+
+
+    /**
+     * Procesa el PDF seleccionado localmente usando PDFUtils y PDFParser.
+     * Esta operación se realiza en un hilo de fondo.
+     * @param pdfUri La URI del archivo PDF seleccionado por el usuario.
+     */
+
+        private void processPdfLocally(Uri pdfUri) {
+            // Mostrar mensaje de procesamiento en la UI inmediatamente
+            runOnUiThread(() -> {
+                nombreCliente.setText("Procesando PDF...");
+                textoCliente.setText("Por favor, espere.");
+                btnNext.setEnabled(false);
+                btnPrevious.setEnabled(false);
+            });
+
+            executorService.execute(() -> {
+                try (InputStream inputStream = getContentResolver().openInputStream(pdfUri)) {
+                    if (inputStream == null) {
+                        throw new IOException("No se pudo abrir el InputStream del PDF para la URI: " + pdfUri.toString());
+                    }
+
+                    final List<PedidoModel> pedidosResultantes = PDFParser.parsePedidos(inputStream);
+
+                    runOnUiThread(() -> {
+                        currentPedidosList = pedidosResultantes;
+                        currentPedidoIndex = 0;
+                        currentProductoIndex = 0;
+
+                        if (currentPedidosList.isEmpty()) {
+                            nombreCliente.setText("Sin pedidos");
+                            textoCliente.setText("Documento vacío.");
+                            speakText("No se encontraron pedidos en el documento.", UTTERANCE_ID_GENERAL_MESSAGE);
+                            Log.d(TAG, "DEBUG_PROCESS_PDF: PDF procesado, pero sin pedidos. Dictando mensaje.");
+                        } else {
+                            Log.d(TAG, "DEBUG_PROCESS_PDF: PDF procesado exitosamente.");
+                            // --- LÓGICA DE INICIO DE PEDIDO: ANUNCIAR EL PRIMER CLIENTE SI EXISTE ---
+                            PedidoModel primerPedido = currentPedidosList.get(0);
+                            String primerCliente = primerPedido.getCliente();
+
+                            if (primerCliente != null && !primerCliente.trim().isEmpty()) {
+                                speakText("Pedido para el cliente: " + primerCliente + ".", UTTERANCE_ID_CLIENTE);
+                                Log.d(TAG, "DEBUG_VOZ: Iniciando dictado del primer cliente: " + primerCliente);
+                            }
+
+                            else {
+                                speakText("Informe de cargamento. Primer pedido sin cliente.", UTTERANCE_ID_CLIENTE);
+                                Log.d(TAG, "DEBUG_VOZ: Iniciando dictado del primer pedido sin cliente.");
+                            }
+
+                            // El displayAndSpeakCurrentItem() se llamará cuando termine de hablar el cliente,
+                            // gracias al UtteranceProgressListener para UTTERANCE_ID_CLIENTE.
+                            // Esto asegura la secuencia: Cliente -> Producto
+                        }
+                        updateNavigationButtonsState();
+                    });
+
+                } catch (SecurityException e) {
+                    Log.e(TAG, "Error de seguridad al procesar el PDF: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        nombreCliente.setText("Permiso Denegado");
+                        textoCliente.setText("Verifique permisos de acceso al archivo.");
+                        updateNavigationButtonsState();
+                        speakText("Error de permiso al acceder al documento PDF.", UTTERANCE_ID_ERROR);
+                    });
+                }
+                catch (IOException e) {
+                    Log.e(TAG, "Error de I/O al procesar el PDF localmente: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        nombreCliente.setText("Error de lectura");
+                        textoCliente.setText("No se pudo acceder al archivo.");
+                        updateNavigationButtonsState();
+                        speakText("Error al leer el documento PDF. Podría estar corrupto o inaccesible.", UTTERANCE_ID_ERROR);
+                    });
+                }
+                catch (Exception e) { // Captura cualquier otra excepción inesperada del parseador
+                    Log.e(TAG, "Error inesperado al procesar el PDF: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        nombreCliente.setText("Error al parsear");
+                        textoCliente.setText("Formato de PDF no reconocido.");
+                        updateNavigationButtonsState();
+                        speakText("Error al procesar el contenido del documento PDF.", UTTERANCE_ID_ERROR);
+                    });
+                }
+            });
+        }
+
+
+
+    /**
+     * Gestiona el dictado de texto usando TextToSpeech, deteniendo cualquier dictado previo.
+     * @param text El texto a dictar.
+     * @param utteranceId El ID para identificar el dictado en el UtteranceProgressListener.
+     */
+    private void speakText(String text, String utteranceId) {
+        if (textToSpeech != null && textToSpeech.getEngines().size() > 0) {
+            textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+            Log.d(TAG, "Dictando: '" + text + "' (Utterance ID: " + utteranceId + ")");
+        } else {
+            Log.e(TAG, "TextToSpeech no está inicializado o no hay motores de voz. No se puede dictar: " + text);
+        }
+    }
+
+    /**
+     * Muestra el pedido y producto actual en la UI y lo dicta.
+     */
     private void displayAndSpeakCurrentItem() {
         if (currentPedidosList == null || currentPedidosList.isEmpty()) {
             nombreCliente.setText("No hay pedidos");
             textoCliente.setText("");
-            btnNext.setEnabled(false);
-            btnPrevious.setEnabled(false);
-            Log.d("PedidosApp", "DEBUG_DISPLAY_SPEAK: No hay pedidos para mostrar.");
+            Log.d(TAG, "DEBUG_DISPLAY_SPEAK: No hay pedidos para mostrar.");
+            updateNavigationButtonsState();
             return;
         }
 
-        if (currentPedidoIndex < 0 || currentPedidoIndex >= currentPedidosList.size()) {
-            Log.e("PedidosApp", "DEBUG_DISPLAY_SPEAK: Índice de pedido fuera de rango: " + currentPedidoIndex + ". Ajustando a 0.");
+        // Asegurar que el índice de pedido esté dentro de los límites
+        if (currentPedidoIndex < 0) {
             currentPedidoIndex = 0;
-            currentProductoIndex = 0;
-            return;
+            Log.w(TAG, "DEBUG_DISPLAY_SPEAK: Índice de pedido < 0. Ajustando a 0.");
         }
+        if (currentPedidoIndex >= currentPedidosList.size()) {
+            currentPedidoIndex = currentPedidosList.size() - 1; // Último pedido
+            Log.w(TAG, "DEBUG_DISPLAY_SPEAK: Índice de pedido fuera de rango. Ajustando al último.");
+        }
+
 
         PedidoModel currentPedido = currentPedidosList.get(currentPedidoIndex);
         nombreCliente.setText(currentPedido.getCliente());
@@ -336,22 +558,77 @@ public class MainActivity extends AppCompatActivity {
         if (productos.isEmpty()) {
             textoCliente.setText("No hay productos para este cliente");
             speechOutput.append("No hay productos para este cliente.");
-            Log.d("PedidosApp", "DEBUG_PRODUCTO_TTS: Cliente '" + currentPedido.getCliente() + "' sin productos.");
-            speakText(speechOutput.toString(), UTTERANCE_ID_ITEM); // Se le asigna un ID para que el listener sepa que es un item
+            Log.d(TAG, "DEBUG_PRODUCTO_TTS: Cliente '" + currentPedido.getCliente() + "' sin productos.");
+            speakText(speechOutput.toString(), UTTERANCE_ID_ITEM);
         } else {
-            if (currentProductoIndex < 0 || currentProductoIndex >= productos.size()) {
-                Log.e("PedidosApp", "DEBUG_DISPLAY_SPEAK: Índice de producto fuera de rango: " + currentProductoIndex + " para el cliente: " + currentPedido.getCliente() + ". Ajustando a 0.");
+            // Asegurar que el índice de producto esté dentro de los límites
+            if (currentProductoIndex < 0) {
                 currentProductoIndex = 0;
+                Log.w(TAG, "DEBUG_DISPLAY_SPEAK: Índice de producto < 0. Ajustando a 0.");
             }
+            if (currentProductoIndex >= productos.size()) {
+                currentProductoIndex = productos.size() - 1; // Último producto de ese pedido
+                Log.w(TAG, "DEBUG_DISPLAY_SPEAK: Índice de producto fuera de rango. Ajustando al último.");
+            }
+
             ProductoModel currentProducto = productos.get(currentProductoIndex);
             textoCliente.setText("Cant: " + currentProducto.getCantidad() + ", Desc: " + currentProducto.getDescripcion());
 
             speechOutput.append(currentProducto.getCantidad()).append(" de ").append(currentProducto.getDescripcion()).append(".");
-            Log.d("PedidosApp", "DEBUG_PRODUCTO_TTS: Preparando dictado de producto: " + speechOutput.toString());
-            speakText(speechOutput.toString(), UTTERANCE_ID_ITEM); // Se le asigna un ID
+            Log.d(TAG, "DEBUG_PRODUCTO_TTS: Preparando dictado de producto: " + speechOutput.toString());
+            speakText(speechOutput.toString(), UTTERANCE_ID_ITEM);
         }
+        updateNavigationButtonsState();
     }
 
+    /**
+     * Actualiza el estado de los botones de navegación (Next, Previous)
+     * basándose en la posición actual en la lista de pedidos y productos.
+     */
+    private void updateNavigationButtonsState() {
+        if (currentPedidosList == null || currentPedidosList.isEmpty()) {
+            btnNext.setEnabled(false);
+            btnPrevious.setEnabled(false);
+            return;
+        }
+
+        boolean canGoNext = false;
+        boolean canGoPrevious = false;
+
+        // Comprobación para avanzar
+        // Si no es el último pedido
+        if (currentPedidoIndex < currentPedidosList.size() - 1) {
+            canGoNext = true;
+        }
+        // O si es el último pedido pero no el último producto de ese pedido
+        else if (currentPedidoIndex == currentPedidosList.size() - 1) {
+            PedidoModel currentPedido = currentPedidosList.get(currentPedidoIndex);
+            if (currentProductoIndex < currentPedido.getProductos().size() - 1) {
+                canGoNext = true;
+            }
+        }
+
+        // Comprobación para retroceder
+        // Si no es el primer pedido
+        if (currentPedidoIndex > 0) {
+            canGoPrevious = true;
+        }
+        // O si es el primer pedido pero no el primer producto de ese pedido
+        else if (currentPedidoIndex == 0) {
+            if (currentProductoIndex > 0) {
+                canGoPrevious = true;
+            }
+        }
+
+        btnNext.setEnabled(canGoNext);
+        btnPrevious.setEnabled(canGoPrevious);
+
+        Log.d(TAG, "DEBUG_BUTTON_STATE: Next=" + canGoNext + ", Previous=" + canGoPrevious +
+                " (Pedido: " + currentPedidoIndex + ", Producto: " + currentProductoIndex + ")");
+    }
+
+    // El método formatTime parece no estar directamente relacionado con el parseo del PDF
+    // o la navegación de pedidos, pero se mantiene como estaba.
     private String formatTime(int progress, int max) {
         int totalSeconds = 217;
         int currentSeconds = (int) (totalSeconds * (progress / 100.0));
@@ -362,127 +639,16 @@ public class MainActivity extends AppCompatActivity {
         return String.format("%d:%02d", minutes, seconds);
     }
 
-    private void uploadPdfFile(Uri pdfUri) {
-        final File tempFile;
-        try {
-            tempFile = createTempFileFromUri(pdfUri);
-            if (tempFile == null) {
-                Log.e("PedidosApp", "DEBUG_UPLOAD: Error al crear archivo temporal.");
-                speakText("Error al crear archivo temporal.", UTTERANCE_ID_ERROR);
-                return;
-            }
-
-            RequestBody requestFile = RequestBody.create(MediaType.parse("application/pdf"), tempFile);
-            MultipartBody.Part body = MultipartBody.Part.createFormData("file", tempFile.getName(), requestFile);
-
-            Call<List<PedidoModel>> call = apiService.procesarPDF(body);
-            Log.d("PedidosApp", "DEBUG_UPLOAD: Subiendo PDF a la API.");
-            call.enqueue(new Callback<List<PedidoModel>>() {
-                @Override
-                public void onResponse(Call<List<PedidoModel>> call, Response<List<PedidoModel>> response) {
-                    if (tempFile != null && tempFile.exists()) {
-                        tempFile.delete();
-                        Log.d("PedidosApp", "DEBUG_UPLOAD: Archivo temporal eliminado.");
-                    }
-
-                    if (response.isSuccessful() && response.body() != null) {
-                        currentPedidosList = response.body();
-                        currentPedidoIndex = 0;
-                        currentProductoIndex = 0;
-
-                        if (currentPedidosList.isEmpty()) {
-                            nombreCliente.setText("Sin cliente");
-                            textoCliente.setText("Sin productos");
-                            btnNext.setEnabled(false);
-                            btnPrevious.setEnabled(false);
-                            speakText("No se encontraron pedidos en el documento.", UTTERANCE_ID_GENERAL_MESSAGE);
-                            Log.d("PedidosApp", "DEBUG_UPLOAD: PDF procesado, pero sin pedidos. Dictando mensaje.");
-                        } else {
-                            btnNext.setEnabled(true);
-                            btnPrevious.setEnabled(true);
-
-                            String firstClientName = currentPedidosList.get(0).getCliente();
-                            Log.d("PedidosApp", "DEBUG_CLIENTE_TTS: Primer cliente detectado: " + firstClientName);
-                            // Dicta el nombre del primer cliente, el callback onDone llamará a displayAndSpeakCurrentItem
-                            speakText("Pedido para el cliente: " + firstClientName + ".", UTTERANCE_ID_CLIENTE);
-                        }
-                    } else {
-                        String errorBody = "";
-                        try {
-                            if (response.errorBody() != null) {
-                                errorBody = response.errorBody().string();
-                            }
-                        } catch (Exception e) {
-                            errorBody = "No se pudo leer el cuerpo de error";
-                            e.printStackTrace();
-                        }
-                        Log.e("PedidosApp", "DEBUG_UPLOAD: Error en la respuesta del servidor: " + response.code() + " - " + errorBody);
-                        nombreCliente.setText("Error al cargar");
-                        textoCliente.setText("");
-                        btnNext.setEnabled(false);
-                        btnPrevious.setEnabled(false);
-                        speakText("Error en la respuesta del servidor o al procesar el documento.", UTTERANCE_ID_ERROR);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<List<PedidoModel>> call, Throwable t) {
-                    if (tempFile != null && tempFile.exists()) {
-                        tempFile.delete();
-                        Log.d("PedidosApp", "DEBUG_UPLOAD: Archivo temporal eliminado después de fallo.");
-                    }
-                    Log.e("PedidosApp", "DEBUG_UPLOAD: Error de red o conexión: " + t.getMessage(), t);
-                    nombreCliente.setText("Error de conexión");
-                    textoCliente.setText("");
-                    btnNext.setEnabled(false);
-                    btnPrevious.setEnabled(false);
-                    speakText("Error de conexión. Verifique su red y el servidor.", UTTERANCE_ID_ERROR);
-                }
-            });
-
-        } catch (Exception e) {
-            Log.e("PedidosApp", "DEBUG_UPLOAD: Error al preparar el archivo para subir: " + e.getMessage(), e);
-            speakText("Error al preparar el archivo para subir.", UTTERANCE_ID_ERROR);
-        }
-    }
-
-    private File createTempFileFromUri(Uri uri) {
-        File tempFile = null;
-        InputStream inputStream = null;
-        OutputStream outputStream = null;
-        try {
-            inputStream = getContentResolver().openInputStream(uri);
-            if (inputStream != null) {
-                tempFile = File.createTempFile("upload_pdf", ".pdf", getCacheDir());
-                outputStream = new FileOutputStream(tempFile);
-                byte[] buffer = new byte[1024];
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
-                }
-                outputStream.flush();
-                Log.d("PedidosApp", "DEBUG_TEMP_FILE: Archivo temporal creado: " + tempFile.getAbsolutePath());
-            }
-        } catch (Exception e) {
-            Log.e("PedidosApp", "DEBUG_TEMP_FILE: Error al crear archivo temporal: " + e.getMessage(), e);
-            tempFile = null;
-        } finally {
-            try {
-                if (inputStream != null) inputStream.close();
-                if (outputStream != null) outputStream.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return tempFile;
-    }
-
     @Override
     protected void onDestroy() {
         if (textToSpeech != null) {
             textToSpeech.stop();
             textToSpeech.shutdown();
-            Log.d("PedidosApp", "TextToSpeech liberado en onDestroy.");
+            Log.d(TAG, "TextToSpeech liberado en onDestroy.");
+        }
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow(); // Intentar apagar de inmediato
+            Log.d(TAG, "ExecutorService apagado en onDestroy.");
         }
         super.onDestroy();
     }
