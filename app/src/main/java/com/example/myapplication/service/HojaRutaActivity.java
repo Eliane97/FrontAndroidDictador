@@ -41,10 +41,10 @@ import java.util.regex.Pattern;
  * Se encarga de capturar el texto crudo del informe, procesar flujos de datos iterativos continuos
  * para extraer cualquier cantidad variable de clientes, permitir la edición interactiva de la
  * grilla en memoria (CRUD) e interceptar la acción de exportación mediante un formulario de metadatos.
- * Diseña el PDF optimizando el espacio al máximo: escribe la zona y las fechas una única vez al principio
- * de la primera hoja y limpia los encabezados secundarios de las hojas de continuación para maximizar la grilla,
- * soportando una paginación dinámica y fluida para volúmenes grandes de datos (hasta 200 ítems) mediante un
- * control estricto de apertura y cierre formal de páginas de la API de Android.
+ * Diseña el PDF en formato vertical optimizando el espacio al máximo mediante una reducción drástica
+ * del alto de las casillas de los ítems. Agrupa el título de la distribuidora, los datos logísticos
+ * y el cuadro de rendición del repartidor exclusivamente en la cabecera superior de la primera hoja,
+ * maximizando la superficie útil de impresión y eliminando fondos de color innecesarios.
  */
 public class HojaRutaActivity extends AppCompatActivity {
 
@@ -259,7 +259,7 @@ public class HojaRutaActivity extends AppCompatActivity {
 
     /**
      * Dibuja y genera vectorialmente las celdas de la Hoja de Ruta para su volcado a PDF.
-     * CORREGIDO: Se reestructuró por completo el ciclo de vida de apertura/cierre de páginas de la API de Android.
+     * MODIFICADO: Pone el cuadro de rendición manual arriba a la derecha únicamente en la primera página.
      */
     private void exportarYDescargarPdfReal(String zonaParam, String fechaVentaParam, String fechaEntregaParam) {
         PdfDocument doc = new PdfDocument();
@@ -274,39 +274,50 @@ public class HojaRutaActivity extends AppCompatActivity {
         Paint tp = new Paint();
         tp.setAntiAlias(true);
 
-        String[] columnas = {"Num", "Nombre del cliente", "Importe", "Pago", "Debe", "Entrega", "Entregado/vuelto"};
+        String[] columnas = {"Num", "Nombre del cliente", "Importe", "Pago", "Debe", "Entrega", "Devuelto"};
         int[] posX = {30, 65, 230, 300, 365, 430, 500};
-        int altoF = 24;
+
+        // Altura de fila achicada al extremo (13 puntos) para optimizar el espacio impreso
+        int altoF = 13;
 
         // Puntero vertical dinámico de coordenadas del lienzo Y
-        int yAct = 90;
-        int nroPagina = 1;
-        int limiteInferiorHoja = 760; // Línea de resguardo físico inferior seguro para la tabla
+        int yAct = 75;
+        int limiteInferiorHoja = 780; // Incrementado levemente el área de resguardo al no tener el cuadro al final
 
-        // Imprime los datos base logísticos en la cabecera superior de la primera hoja
-        tp.setTextSize(9f); tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
-        canvasActual.drawText("Zona: " + zonaParam + "   |   F. Venta: " + fechaVentaParam + "   |   F. Entrega: " + fechaEntregaParam, 30, 50, tp);
-
-        // Configuración inicial de posiciones para arrancar la tabla en la primera hoja
-        yAct = 65;
-
-        // --- SUB-RUTINA DIRECTA PARA DIBUJAR CABECERAS ---
-        // Pintamos los títulos del reporte y las cabeceras de columnas sobre el lienzo activo actual
+        // --- ENCABEZADO SUPERIOR EXCLUSIVO DE LA HOJA PRINCIPAL ---
+        // Pintamos el título de la distribuidora en el cuadrante superior izquierdo
         tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
         canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
 
-        tp.setTextSize(9f); tp.setFakeBoldText(false);
-        canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
+        // Imprime los datos base logísticos debajo del título principal
+        tp.setTextSize(8.5f); tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
+        canvasActual.drawText("Zona: " + zonaParam + "   |   F. Venta: " + fechaVentaParam + "   |   F. Entrega: " + fechaEntregaParam, 30, 52, tp);
 
-        p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
-        canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
+        // MODIFICADO: UBICACIÓN DEL CUADRO DE RENDICIÓN MANUAL (Arriba a la derecha - Primera Página)
+        p.setColor(Color.parseColor("#475569"));
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f);
+        // Dibujamos el contorno del cuadro de rendición en el margen derecho de la cabecera
+        canvasActual.drawRect(310, 20, 565, yAct - 15, p);
 
-        tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
-        for (int j = 0; j < columnas.length; j++) {
-            canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
-        }
+        // Rellenamos el cuadro de rendición manual con sus textos e indicadores de línea para el chofer
+        tp.setTextSize(8f); tp.setFakeBoldText(false);
+        canvasActual.drawText("Plata + Fiado: ___________ ", 318, 33, tp);
+        canvasActual.drawText("Venta + Cobranza: ______________", 432, 33, tp);
+        canvasActual.drawText("Gasto: _______________ Importe:____________", 318, 50, tp);
+
+
+        // --- DIBUJO DE CABECERA PRINCIPAL DE LA TABLA ---
+        // Se dibuja directo un recuadro transparente con contorno gris sin color azul de fondo
         p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
-        yAct += altoF; // Posiciona el puntero Y justo debajo del encabezado que se acaba de pintar
+        canvasActual.drawRect(30, yAct, 565, yAct + 18, p);
+
+        // Setea las fuentes del encabezado en negro para economizar tinta de impresión
+        tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
+        for (int j = 0; j < columnas.length; j++) {
+            canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 13, tp);
+            if (posX[j] > 30) canvasActual.drawLine(posX[j], yAct, posX[j], yAct + 18, p);
+        }
+        yAct += 18; // Posiciona el puntero Y justo debajo del encabezado de la primera hoja
 
         double totalGlobalAcumulado = 0;
 
@@ -314,33 +325,26 @@ public class HojaRutaActivity extends AppCompatActivity {
         for (int i = 0; i < listaPedidosGlobal.size(); i++) {
             ItemPedido item = listaPedidosGlobal.get(i);
 
-            // CORREGIDO: DETECCIÓN Y CAMBIO DE HOJA ESTRICTO
-            // Si la siguiente fila supera el límite de seguridad, cerramos la hoja previa y abrimos la que sigue secuencialmente
+            // DETECCIÓN Y CAMBIO DE HOJA ESTRICTO
             if (yAct + altoF > limiteInferiorHoja) {
-                doc.finishPage(paginaActual); // CORREGIDO: Cerramos FORMALMENTE la hoja que se llenó en el documento
-                nroPagina++; // Avanzamos el contador físico de páginas
+                doc.finishPage(paginaActual); // Cerramos FORMALMENTE la hoja previa
 
-                paginaActual = doc.startPage(pInfo); // Instanciamos la nueva hoja en memoria
-                canvasActual = paginaActual.getCanvas(); // Obtenemos el nuevo lienzo limpio para seguir dibujando
+                paginaActual = doc.startPage(pInfo); // Instanciamos una página limpia de continuación
+                canvasActual = paginaActual.getCanvas(); // Vinculamos su lienzo vectorial
 
-                // Redibujamos el encabezado limpio y optimizado para hojas de continuación
-                yAct = 48; // Subimos el margen superior para ganar espacio físico para los ítems
+                // Redibujamos el encabezado secundario limpio desde arriba (Subimos a yAct = 42 para ganar espacio)
+                yAct = 42;
 
-                tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
-                canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
-
-                tp.setTextSize(9f); tp.setFakeBoldText(false);
-                canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
-
-                p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
-                canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
-
-                tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
-                for (int j = 0; j < columnas.length; j++) {
-                    canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
-                }
+                // Mantiene el estilo transparente con bordes grises sin títulos institucionales ni nro de página
                 p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
-                yAct += altoF; // Ajustamos el puntero debajo del nuevo header de la hoja de continuación
+                canvasActual.drawRect(30, yAct, 565, yAct + 18, p);
+
+                tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
+                for (int j = 0; j < columnas.length; j++) {
+                    canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 13, tp);
+                    if (posX[j] > 30) canvasActual.drawLine(posX[j], yAct, posX[j], yAct + 18, p);
+                }
+                yAct += 18; // Desplaza cursor debajo de la cabecera secundaria
             }
 
             // Efecto cebra para las celdas intercaladas de la grilla
@@ -352,12 +356,14 @@ public class HojaRutaActivity extends AppCompatActivity {
 
             // Dibujo del borde rectangular externo de la fila actual
             canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
-            tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
 
-            // Renderizado de textos dentro de las columnas correspondientes
-            canvasActual.drawText(String.valueOf(i + 1), posX[0] + 4, yAct + 15, tp);
-            canvasActual.drawText(item.nombre, posX[1] + 4, yAct + 15, tp);
-            canvasActual.drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct + 15, tp);
+            // Fuente ultra-compacta (7f) para que entre perfectamente en la casilla miniatura
+            tp.setTextSize(7f); tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
+
+            // Centrado vertical calibrado a +10 para amoldarse a los 13 puntos de alto
+            canvasActual.drawText(String.valueOf(i + 1), posX[0] + 4, yAct + 10, tp);
+            canvasActual.drawText(item.nombre, posX[1] + 4, yAct + 10, tp);
+            canvasActual.drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct + 10, tp);
 
             // Trazado de líneas verticales internas de separación de celdas
             for (int x : posX) {
@@ -367,54 +373,34 @@ public class HojaRutaActivity extends AppCompatActivity {
             yAct += altoF; // Incrementamos el cursor vertical para la próxima iteración del bucle
         }
 
-        // VALIDACIÓN DE ESPACIO FINAL PARA TOTALES Y CUADRO DE RENDICIÓN (Requiere un bloque mínimo de 100 puntos)
-        if (yAct + altoF + 100 > limiteInferiorHoja) {
-            doc.finishPage(paginaActual); // Cerramos la página actual porque no entran los totales
-            nroPagina++; // Incrementamos el número de página final
-            paginaActual = doc.startPage(pInfo); // Abrimos una página limpia de cierre
-            canvasActual = paginaActual.getCanvas(); // Obtenemos su lienzo
+        // VALIDACIÓN DE ESPACIO FINAL EXCLUSIVAMENTE PARA LA FILA DE TOTALES (Bloque mínimo requerido de 35 puntos)
+        if (yAct + altoF + 35 > limiteInferiorHoja) {
+            doc.finishPage(paginaActual);
+            paginaActual = doc.startPage(pInfo);
+            canvasActual = paginaActual.getCanvas();
 
-            yAct = 48; // Seteamos posición superior inicial
+            yAct = 42; // Posición superior inicial en la hoja final de cierre
 
-            tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
-            canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
-
-            tp.setTextSize(9f); tp.setFakeBoldText(false);
-            canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
-
-            p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
-            canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
-
-            tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
-            for (int j = 0; j < columnas.length; j++) {
-                canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
-            }
             p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
-            yAct += altoF; // Posicionamos debajo del header final
+            canvasActual.drawRect(30, yAct, 565, yAct + 18, p);
+
+            tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
+            for (int j = 0; j < columnas.length; j++) {
+                canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 13, tp);
+                if (posX[j] > 30) canvasActual.drawLine(posX[j], yAct, posX[j], yAct + 18, p);
+            }
+            yAct += 18;
         }
 
         // Fila de clausura para mostrar el subtotal/total general de la grilla
         p.setStyle(Paint.Style.STROKE); p.setColor(Color.parseColor("#94A3B8"));
-        canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
-        tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
-        canvasActual.drawText("TOTALES:", posX[1] + 4, yAct + 15, tp);
-        canvasActual.drawText(String.format("$ %,.2f", totalGlobalAcumulado), posX[2] + 4, yAct + 15, tp);
-        canvasActual.drawLine(posX[2], yAct, posX[2], yAct + altoF, p);
+        canvasActual.drawRect(30, yAct, 565, yAct + 18, p);
+        tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
+        canvasActual.drawText("TOTAL:", posX[1] + 4, yAct + 13, tp);
+        canvasActual.drawText(String.format("$ %,.2f", totalGlobalAcumulado), posX[2] + 4, yAct + 13, tp);
+        canvasActual.drawLine(posX[2], yAct, posX[2], yAct + 18, p);
 
-        yAct += altoF + 12; // Separación física prudencial entre la grilla y los bloques informativos finales
-
-
-
-        // --- COLUMNA DERECHA: Cuadro de Rendición Manual del Repartidor---
-        p.setColor(Color.parseColor("#475569"));
-        canvasActual.drawRect(295, yAct, 565, yAct + 34, p);
-
-        tp.setFakeBoldText(false);
-        canvasActual.drawText("Plata + Fiado: ___________ %", 305, yAct + 14, tp);
-        canvasActual.drawText("Venta + Cobranza: ______________", 435, yAct + 14, tp);
-        canvasActual.drawText("Gasto: _______________Importe:____________", 305, yAct + 26, tp);
-
-        // CORREGIDO: Se cierra la última página activa del documento de manera formal
+        // Se cierra la última página activa del documento de manera formal
         doc.finishPage(paginaActual);
 
         // Canalización IO para volcar el documento PDF construido en el almacenamiento de descargas
