@@ -37,9 +37,10 @@ import java.util.regex.Pattern;
 /**
  * OBJETIVO PRINCIPAL DE LA CLASE:
  * Gestionar la interfaz operativa del módulo de Hojas de Ruta de la Distribuidora.
- * Se encarga de capturar el texto crudo del informe, parsearlo mediante expresiones regulares,
- * permitir la edición interactiva de los datos (CRUD en memoria) y exportar el resultado final
- * a un documento PDF estructurado vectorialmente para su distribución.
+ * Se encarga de capturar el texto crudo del informe, procesar flujos de datos iterativos continuos
+ * para extraer de forma exacta cualquier cantidad variable de clientes, permitir la edición
+ * interactiva de la grilla en memoria (CRUD) y exportar el resultado final a un documento
+ * PDF dinámico multi-página, garantizando que no se corten los registros sin importar el volumen total.
  */
 public class HojaRutaActivity extends AppCompatActivity {
 
@@ -75,7 +76,7 @@ public class HojaRutaActivity extends AppCompatActivity {
         // Vincula la actividad con su diseño secuencial en XML
         setContentView(R.layout.activity_hoja_ruta);
 
-        // Mapeo exhaustivo de componentes visuales mediante sus identificadores únicos
+        // Mapeo de componentes visuales mediante sus identificadores únicos
         etDatosEntrada = findViewById(R.id.et_datos_entrada);
         rvPedidos = findViewById(R.id.rv_pedidos_tabla);
         btnGenerar = findViewById(R.id.btn_generar_excel);
@@ -125,25 +126,34 @@ public class HojaRutaActivity extends AppCompatActivity {
     }
 
     /**
-     * Motor Regex optimizado para escanear y deserializar los bloques del informe de distribución.
+     * Motor Regex de extracción iterativo de frontera continua.
+     * Escanea secuencialmente el texto de principio a fin, aislando pares de Nombre/Monto sin importar
+     * el volumen de registros suministrados en el portapapeles.
      */
     private List<ItemPedido> extraerDatosDesdeTexto(String texto) {
         List<ItemPedido> res = new ArrayList<>();
-        // Patrón compilado para buscar la Razón Social y capturar de forma perezosa hasta el Total numérico
-        Pattern pattern = Pattern.compile("Razón:\\s*(?:\\d+-)?(.*.*?)\\r?\\n(?:.*?\\r?\\n)*?Total:\\s*\\$\\s*([\\d.,]+)", Pattern.CASE_INSENSITIVE);
+
+        // Expresión regular con exclusión de frontera determinista (?i)Razón:
+        // Captura el nombre parando en el salto de línea, y consume secuencialmente hasta el primer Total: $
+        Pattern pattern = Pattern.compile("Razón:\\s*(?:\\d+-)?\\s*([^\\r\\n]+)(?:(?!Razón:)[\\s\\S])*?Total:\\s*\\$\\s*([\\d.,]+)", Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(texto);
 
-        // Bucle iterativo de búsqueda sobre las coincidencias del texto ingresado
+        // El bucle "while" se ejecuta continuamente hasta agotar la última coincidencia del texto
         while (matcher.find()) {
             try {
                 String nombre = matcher.group(1).trim().toUpperCase();
                 String stringMonto = matcher.group(2).trim();
+
                 // Limpieza monetaria: remueve puntos de miles y altera comas por puntos decimales estándar
                 String montoNormalizado = stringMonto.replace(".", "").replace(",", ".");
                 double importe = Double.parseDouble(montoNormalizado);
-                res.add(new ItemPedido(nombre, importe));
+
+                // Evita cargar registros inconsistentes con importes en cero
+                if (!nombre.isEmpty() && importe > 0) {
+                    res.add(new ItemPedido(nombre, importe));
+                }
             } catch (Exception e) {
-                Log.e(TAG, "Inconsistencia de parseo en línea de texto");
+                Log.e(TAG, "Inconsistencia aislada en procesamiento de bucle de texto");
             }
         }
         return res;
@@ -208,81 +218,120 @@ public class HojaRutaActivity extends AppCompatActivity {
 
     /**
      * Dibuja y genera vectorialmente las celdas de la Hoja de Ruta para su volcado a PDF.
+     * CORREGIDO: Soporta múltiples páginas de forma automática calculando los límites físicos del papel A4.
      */
     private void exportarYDescargarPdfReal() {
         PdfDocument doc = new PdfDocument();
         // Configura tamaño A4 estándar: 595 de ancho por 842 de alto (puntos PostScript)
         PdfDocument.PageInfo pInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
-        PdfDocument.Page pagina = doc.startPage(pInfo);
-        Canvas canvas = pagina.getCanvas();
+
+        // Arreglos de un solo elemento para poder modificar los objetos de página y canvas dentro del bloque Runnable
+        final PdfDocument.Page[] paginaActual = { doc.startPage(pInfo) };
+        final Canvas[] canvasActual = { paginaActual[0].getCanvas() };
 
         Paint p = new Paint();
         Paint tp = new Paint();
         tp.setAntiAlias(true); // Suavizado de bordes tipográficos
 
-        // Renderizado del Membrete Comercial e Información General de la Distribuidora
-        tp.setTextSize(14f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
-        canvas.drawText("Distribuidora Godoy", 30, 45, tp);
-
-        tp.setTextSize(10f); tp.setFakeBoldText(false);
-        canvas.drawText("Reparto - Zona: Sierras", 30, 65, tp);
-        canvas.drawText("Fecha Entrega: Viern 15/05/26", 380, 65, tp);
-
         // Definición matemática de coordenadas de columnas basadas en la planilla base
         String[] columnas = {"Num", "Nombre del cliente", "Importe", "Pago", "Debe", "Entrega", "Entregado/vuelto"};
         int[] posX = {30, 65, 230, 300, 365, 430, 500};
-        int yIn = 90; int altoF = 24;
+        int altoF = 24; // Altura fija de cada renglón
 
-        // Dibujo del bloque contenedor de la cabecera (Azul Institucional)
-        p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
-        canvas.drawRect(30, yIn, 565, yIn + altoF, p);
+        // Punteros mutables envueltos en matrices para actualización de referencias en sub-procesos
+        final int[] yAct = { 90 };
+        final int[] nroPagina = { 1 };
 
-        // Rotulado de textos superiores dentro del rectángulo azul
-        tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
-        for (int i = 0; i < columnas.length; i++) {
-            canvas.drawText(columnas[i], posX[i] + 4, yIn + 15, tp);
-        }
+        // Margen de seguridad antes de tocar el final de la hoja física (842)
+        int limiteInferiorHoja = 780;
 
-        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
-        int yAct = yIn + altoF;
-        double total = 0;
+        // Sub-rutina lambda encargada de dibujar los rótulos fijos y membretes cada vez que nace una página
+        Runnable dibujarEncabezadoHoja = () -> {
+            // Renderizado del Membrete Comercial de la Distribuidora
+            tp.setTextSize(14f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
+            canvasActual[0].drawText("Distribuidora Godoy", 30, 45, tp);
 
-        // Ciclo principal de dibujo: Transfiere la lista en memoria al lienzo vectorial
+            tp.setTextSize(10f); tp.setFakeBoldText(false);
+            canvasActual[0].drawText("Reparto - Zona: Sierras", 30, 65, tp);
+            canvasActual[0].drawText("Pág. " + nroPagina[0], 520, 45, tp); // Indicador numérico de página activa
+            canvasActual[0].drawText("Fecha Entrega: Viern 15/05/26", 380, 65, tp);
+
+            // Dibujo del bloque contenedor de la cabecera (Azul Institucional)
+            p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
+            canvasActual[0].drawRect(30, 90, 565, 90 + altoF, p);
+
+            // Rotulado de textos superiores dentro del rectángulo azul
+            tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
+            for (int j = 0; j < columnas.length; j++) {
+                canvasActual[0].drawText(columnas[j], posX[j] + 4, 90 + 15, tp);
+            }
+
+            p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
+            yAct[0] = 90 + altoF; // Restablece el cursor vertical justo debajo de los encabezados fijos
+        };
+
+        // Ejecuta la impresión inicial del membrete para la hoja número uno
+        dibujarEncabezadoHoja.run();
+        double totalGlobalAcumulado = 0;
+
+        // Ciclo principal de dibujo: Transfiere la lista total de memoria al lienzo vectorial
         for (int i = 0; i < listaPedidosGlobal.size(); i++) {
             ItemPedido item = listaPedidosGlobal.get(i);
 
-            // Efecto cebra para filas impares (Fondo gris tenue)
+            // DETECCIÓN DE DESBORDE: Si la próxima celda excede los 780 puntos, salta de hoja de inmediato
+            if (yAct[0] + altoF > limiteInferiorHoja) {
+                doc.finishPage(paginaActual[0]); // Clausura y guarda el estado de la hoja llena
+                nroPagina[0]++; // Incrementa el contador general
+
+                paginaActual[0] = doc.startPage(pInfo); // Genera un nuevo lienzo en blanco
+                canvasActual[0] = paginaActual[0].getCanvas(); // Reasigna el canvas de dibujo operativo
+
+                dibujarEncabezadoHoja.run(); // Vuelve a estampar la cabecera azul en la hoja nueva
+            }
+
+            // Efecto cebra para filas impares (Fondo gris tenue para agilizar la lectura del chofer)
             if (i % 2 == 1) {
                 p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#F1F5F9"));
-                canvas.drawRect(30, yAct, 565, yAct + altoF, p);
+                canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
                 p.setStyle(Paint.Style.STROKE); p.setColor(Color.parseColor("#94A3B8"));
             }
 
-            // Traza el marco exterior de la celda actual
-            canvas.drawRect(30, yAct, 565, yAct + altoF, p);
+            // Traza el marco exterior perimetral de la celda activa
+            canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
             tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
 
-            // Inyección de cadenas de caracteres puras dentro de las coordenadas de la fila
-            canvas.drawText(String.valueOf(i + 1), posX[0] + 4, yAct + 15, tp);
-            canvas.drawText(item.nombre, posX[1] + 4, yAct + 15, tp);
-            canvas.drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct + 15, tp);
+            // Inyección de textos planos formateados dentro de sus respectivas columnas vectoriales
+            canvasActual[0].drawText(String.valueOf(i + 1), posX[0] + 4, yAct[0] + 15, tp);
+            canvasActual[0].drawText(item.nombre, posX[1] + 4, yAct[0] + 15, tp);
+            canvasActual[0].drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct[0] + 15, tp);
 
-            // Segmentación interna de líneas verticales divisorias
+            // Segmentación y trazado de líneas verticales divisorias
             for (int x : posX) {
-                if (x > 30) canvas.drawLine(x, yAct, x, yAct + altoF, p);
+                if (x > 30) canvasActual[0].drawLine(x, yAct[0], x, yAct[0] + altoF, p);
             }
-            total += item.importe;
-            yAct += altoF; // Salto de línea dinámico proporcional a la altura fijada
+            totalGlobalAcumulado += item.importe;
+            yAct[0] += altoF; // Desplaza el cursor vertical proporcionalmente al alto de fila
         }
 
-        // Fila de clausura para el cálculo y muestra del Total General
-        canvas.drawRect(30, yAct, 565, yAct + altoF, p);
-        tp.setFakeBoldText(true);
-        canvas.drawText("TOTALES:", posX[1] + 4, yAct + 15, tp);
-        canvas.drawText(String.format("$ %,.2f", total), posX[2] + 4, yAct + 15, tp);
-        canvas.drawLine(posX[2], yAct, posX[2], yAct + altoF, p);
+        // VALIDACIÓN DE CIERRE PARA EL TOTAL: Si la fila final no entra en la última hoja, salta una más
+        if (yAct[0] + altoF > limiteInferiorHoja) {
+            doc.finishPage(paginaActual[0]);
+            nroPagina[0]++;
+            paginaActual[0] = doc.startPage(pInfo);
+            canvasActual[0] = paginaActual[0].getCanvas();
+            dibujarEncabezadoHoja.run();
+        }
 
-        doc.finishPage(pagina);
+        // Fila de clausura definitiva para el cálculo y muestra del Total General
+        p.setStyle(Paint.Style.STROKE); p.setColor(Color.parseColor("#94A3B8"));
+        canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
+        tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
+        canvasActual[0].drawText("TOTALES:", posX[1] + 4, yAct[0] + 15, tp);
+        canvasActual[0].drawText(String.format("$ %,.2f", totalGlobalAcumulado), posX[2] + 4, yAct[0] + 15, tp);
+        canvasActual[0].drawLine(posX[2], yAct[0], posX[2], yAct[0] + altoF, p);
+
+        // Finaliza y cierra de forma segura la última hoja del lote procesado
+        doc.finishPage(paginaActual[0]);
 
         // Proceso de guardado en la carpeta compartida pública de descargas
         try {
@@ -351,7 +400,6 @@ public class HojaRutaActivity extends AppCompatActivity {
             TextView tvNum, tvNombre, tvImporte;
             ImageButton btnEditar, btnEliminar;
 
-            // CORREGIDO: El nombre del constructor ahora coincide exactamente con el nombre de la clase interna
             TablaViewHolder(View itemView) {
                 super(itemView);
                 tvNum = itemView.findViewById(R.id.tv_item_num);
