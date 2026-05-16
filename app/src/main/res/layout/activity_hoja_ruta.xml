@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0A101C"
+    android:padding="16dp"
+    tools:context=".service.HojaRutaActivity">
+
+    <TextView
+        android:id="@+id/tv_titulo_modulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Distribuidora Godoy"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:fontFamily="sans-serif-medium" />
+
+    <TextView
+        android:id="@+id/tv_subtitulo_modulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Gestión interactiva de Hoja de Ruta"
+        android:textColor="#94A3B8"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardInputHolder"
+        android:layout_width="match_parent"
+        android:layout_height="130dp"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="#131D31"
+        app:cardCornerRadius="14dp"
+        app:strokeColor="#21314B"
+        app:strokeWidth="1dp">
+
+        <EditText
+            android:id="@+id/et_datos_entrada"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:gravity="top|start"
+            android:hint="Pegue el Informe de Entrega aquí y pulse procesar..."
+            android:inputType="textMultiLine"
+            android:padding="12dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#5E7599"
+            android:fontFamily="monospace"
+            android:textSize="13sp"
+            android:scrollbars="vertical" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:id="@+id/headerTablaSimulada"
+        android:layout_width="match_parent"
+        android:layout_height="38dp"
+        android:layout_marginTop="16dp"
+        android:background="#1E3A8A"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <TextView
+            android:layout_width="35dp"
+            android:layout_height="wrap_content"
+            android:text="N°"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:fontFamily="monospace"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Nombre del cliente"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:layout_width="95dp"
+            android:layout_height="wrap_content"
+            android:text="Importe"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:gravity="end"
+            android:layout_marginEnd="64dp"/>
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_pedidos_tabla"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0E1726" />
+
+    <LinearLayout
+        android:id="@+id/panelAccionesInferior"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_limpiar"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:text="❌"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:padding="0dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            app:backgroundTint="#334155"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_agregar_item"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="8dp"
+            android:text="➕"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:padding="0dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            app:backgroundTint="#10B981"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_generar_excel"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="PROCESAR TEXTO"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:padding="0dp"
+            android:minHeight="0dp"
+            app:backgroundTint="#2563EB"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_compartir_excel"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:text="📄"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:padding="0dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            app:backgroundTint="#1E3A8A"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+
+</LinearLayout>

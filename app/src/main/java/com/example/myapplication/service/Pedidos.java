@@ -1,27 +1,29 @@
-package com.example.myapplication; // O el nombre de tu paquete si es diferente
+package com.example.myapplication.service; // O el nombre de tu paquete si es diferente
 
-import android.Manifest; // Importación necesaria para permisos
 import android.content.Intent;
 import android.content.pm.PackageManager; // Importación necesaria para permisos
 import android.net.Uri;
 import android.os.Bundle;
+import androidx.appcompat.widget.PopupMenu;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.View;
+
+import com.example.myapplication.R;
+import com.example.myapplication.model.PedidoModel;
+import com.example.myapplication.model.ProductoModel;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-// import android.widget.Toast; // Si necesitas Toast, descomenta
+
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat; // Importación necesaria para permisos
-import androidx.core.content.ContextCompat; // Importación necesaria para permisos
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +32,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+public class Pedidos extends AppCompatActivity {
 
     // Constante TAG para Logcat, buena práctica
     private static final String TAG = "MainActivity";
@@ -53,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnPrevious;
     private ImageButton btnPlayPause;
     private ImageButton btnNext;
+    private ImageButton btnMoreOptions;
 
     // Lanzadores y servicios
     private ActivityResultLauncher<String> selectPdfLauncher;
@@ -74,8 +77,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.pedidos);
         PDFBoxResourceLoader.init(getApplicationContext());
+
         Log.d(TAG, "PDFBox inicializado correctamente");
 
 
@@ -84,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btn_back);
         tvPlayingNow = findViewById(R.id.tv_playing_now);
         btnImport = findViewById(R.id.btn_import);
+        btnMoreOptions = findViewById(R.id.btn_more_options);
 
         artistImageContainer = findViewById(R.id.artist_image_container);
         artistImage = findViewById(R.id.artist_image);
@@ -100,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
         // --- 2. Solicitud de Permisos ---
         // Llama a este método al inicio de onCreate para verificar y solicitar el permiso
-        checkStoragePermissions();
+
 
         // --- 3. Configuración del lanzador de actividad para seleccionar PDF ---
         selectPdfLauncher = registerForActivityResult(
@@ -169,27 +174,27 @@ public class MainActivity extends AppCompatActivity {
             public void onRangeStart(String utteranceId, int start, int end, int frame) { /* No es necesario implementar */ }
         });
 
-        // --- 5. Configuración de Listeners para los Botones ---
-        btnBack.setOnClickListener(v -> onBackPressed());
 
-        btnImport.setOnClickListener(v -> {
-            // Antes de lanzar el selector de PDF, verificamos si tenemos el permiso.
-            // Si el permiso no está concedido, no se lanzará el selector hasta que el usuario lo apruebe.
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "DEBUG_IMPORT: Seleccionando archivo PDF...");
-                speakText("Seleccionando archivo PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
-                nombreCliente.setText("Seleccionando PDF..."); // Feedback visual
-                textoCliente.setText("");
-                selectPdfLauncher.launch("application/pdf");
-            } else {
-                // Si el permiso no está concedido, la solicitud ya se hizo en onCreate.
-                // Aquí solo notificamos al usuario.
-                Log.w(TAG, "DEBUG_IMPORT: Permiso READ_EXTERNAL_STORAGE no concedido. No se puede lanzar el selector de PDF.");
-                speakText("Necesito permiso de almacenamiento para seleccionar un PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
-                nombreCliente.setText("Permiso necesario");
-                textoCliente.setText("Activa el permiso en ajustes.");
+        // --- 5. Configuración de Listeners para los Botones ---
+        // Configura el evento de escucha para detectar el toque del usuario
+        btnMoreOptions.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Llama al método para construir y mostrar el menú
+                mostrarMenu(v);
             }
+        });
+        btnBack.setOnClickListener(v -> onBackPressed());
+        btnImport.setOnClickListener(v -> {
+
+            Log.d(TAG, "DEBUG_IMPORT: Seleccionando archivo PDF...");
+            speakText("Seleccionando archivo PDF.", UTTERANCE_ID_GENERAL_MESSAGE);
+
+            nombreCliente.setText("Seleccionando PDF...");
+            textoCliente.setText("");
+
+            // 👉 SIEMPRE lanzar el selector
+            selectPdfLauncher.launch("application/pdf");
         });
 
         btnPlayPause.setOnClickListener(v -> {
@@ -214,50 +219,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "DEBUG_TTS_STOP: Pausa, deteniendo dictado.");
                 }
             }
-        });
-
-        btnNext.setOnClickListener(v -> {
-            if (currentPedidosList == null || currentPedidosList.isEmpty()) {
-                Log.d(TAG, "DEBUG_BTN_NEXT: Lista de pedidos vacía.");
-                speakText("No hay pedidos para navegar.", UTTERANCE_ID_GENERAL_MESSAGE);
-                nombreCliente.setText("No hay pedidos"); // Feedback visual
-                textoCliente.setText("");
-                return;
-            }
-
-            int oldPedidoIndex = currentPedidoIndex;
-
-            PedidoModel currentPedido = currentPedidosList.get(currentPedidoIndex);
-            List<ProductoModel> productos = currentPedido.getProductos();
-
-            if (!productos.isEmpty() && currentProductoIndex < productos.size() - 1) {
-                currentProductoIndex++;
-                Log.d(TAG, "DEBUG_BTN_NEXT: Siguiente artículo dentro del mismo cliente.");
-                displayAndSpeakCurrentItem();
-            } else {
-                if (currentPedidoIndex < currentPedidosList.size() - 1) {
-                    currentPedidoIndex++;
-                    currentProductoIndex = 0;
-
-                    if (currentPedidoIndex != oldPedidoIndex) {
-                        String clientName = currentPedidosList.get(currentPedidoIndex).getCliente();
-                        Log.d(TAG, "DEBUG_CLIENTE_TTS: Cambiando al cliente: " + clientName);
-                        speakText("Cambiando al cliente: " + clientName + ".", UTTERANCE_ID_CLIENTE);
-                    } else {
-                        Log.d(TAG, "DEBUG_BTN_NEXT: No hay más productos en el pedido actual. Llamando a displayAndSpeakCurrentItem para el nuevo cliente o el final.");
-                        displayAndSpeakCurrentItem();
-                    }
-                } else {
-                    speakText("Has llegado al final de todos los pedidos.", UTTERANCE_ID_FINAL_LIST);
-                    Log.d(TAG, "DEBUG_BTN_NEXT: Fin de la lista de pedidos.");
-                    nombreCliente.setText("Fin de pedidos"); // Feedback visual
-                    textoCliente.setText("No hay más para mostrar.");
-                    btnNext.setEnabled(false);
-                    btnPrevious.setEnabled(true);
-                    return;
-                }
-            }
-            updateNavigationButtonsState();
         });
 
 
@@ -385,21 +346,46 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Verifica y solicita el permiso READ_EXTERNAL_STORAGE si es necesario.
+     * Objetivo del método: Desplegar el menú administrativo y gestionar la navegación.
+     * @param view La vista que sirve de ancla para el PopupMenu.
      */
-    private void checkStoragePermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            // El permiso no ha sido concedido, lo solicitamos
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    REQUEST_READ_STORAGE);
-        } else {
-            // El permiso ya está concedido
-            Log.d(TAG, "Permiso READ_EXTERNAL_STORAGE ya concedido.");
-        }
-    }
+    /**
+     * Objetivo: Desplegar el menú administrativo y gestionar la navegación de forma segura.
+     * Se añade un dismiss() explícito y un pequeño delay para liberar recursos gráficos.
+     */
+    /**
+     * Objetivo de la clase/método: Desplegar el menú administrativo y gestionar la transición
+     * segura a la hoja de ruta, minimizando el impacto en el hardware gráfico (SurfaceFlinger).
+     */
+    private void mostrarMenu(View view) {
+        PopupMenu popup = new PopupMenu(Pedidos.this, view);
+        popup.getMenu().add(0, 1, 0, "Crear hoja de ruta");
 
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                // 1. Detener audio (TTS)
+                if (textToSpeech != null) {
+                    textToSpeech.stop();
+                }
+
+                // 2. Navegación con limpieza de stack
+                Intent intent = new Intent(Pedidos.this, HojaRutaActivity.class);
+
+                /** * FLAG_ACTIVITY_REORDER_TO_FRONT ayuda a que el sistema no intente
+                 * recrear sesiones de PQ duplicadas de forma agresiva.
+                 */
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+
+                startActivity(intent);
+
+                // 3. Quitar animaciones (evita que SurfaceFlinger colapse)
+                overridePendingTransition(0, 0);
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
     /**
      * Callback para el resultado de la solicitud de permisos.
      */
@@ -640,16 +626,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onPause() {
+        super.onPause();
+        // Si el TTS está hablando al cambiar de pantalla, lo silenciamos
+        // para evitar que el buffer de audio choque con la nueva Activity.
         if (textToSpeech != null) {
             textToSpeech.stop();
-            textToSpeech.shutdown();
-            Log.d(TAG, "TextToSpeech liberado en onDestroy.");
         }
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdownNow(); // Intentar apagar de inmediato
-            Log.d(TAG, "ExecutorService apagado en onDestroy.");
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Es vital cerrar el executor para evitar fugas de memoria (Memory Leaks)
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+        if (textToSpeech != null) {
+            textToSpeech.shutdown();
         }
         super.onDestroy();
     }
 }
+

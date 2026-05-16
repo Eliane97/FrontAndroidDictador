@@ -1,13 +1,10 @@
-package com.example.myapplication;
-
-import android.util.Log; // Importa para el logging de Android
+package com.example.myapplication.service;
 
 
-import com.example.myapplication.PedidoModel; // Importa tu PedidoModel
-import com.example.myapplication.ProductoModel; // Importa tu ProductoModel
+import com.example.myapplication.model.PedidoModel; // Importa tu PedidoModel
+import com.example.myapplication.model.ProductoModel;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,36 +119,64 @@ public class PDFParser {
     }
 
 
+    /**
+     * Objetivo del método: Procesar el texto de un PDF con múltiples clientes,
+     * extrayendo productos y el valor numérico del total de cada pedido.
+     */
     private static List<PedidoModel> parseConClientes(String texto) {
         List<PedidoModel> pedidos = new ArrayList<>();
         String[] lineas = texto.split("\\r?\\n");
 
+        // Inicialización de variables de control
+        String totalActual = "0.00";
         String clienteActual = null;
         List<ProductoModel> productosActuales = new ArrayList<>();
 
+        // Bucle para recorrer cada línea del texto extraído
         for (String linea : lineas) {
             linea = linea.trim();
             if (linea.isEmpty()) continue;
 
+            // 1. Detección de cambio de cliente
             if (linea.contains("PEDIDO:")) {
                 if (clienteActual != null && !productosActuales.isEmpty()) {
-                    pedidos.add(new PedidoModel(clienteActual, productosActuales)); // Usa PedidoModel
+                    // Se agrega el pedido anterior incluyendo el total capturado
+                    pedidos.add(new PedidoModel(clienteActual, productosActuales, totalActual));
+
+                    // Reinicio para el nuevo cliente
                     productosActuales = new ArrayList<>();
+                    totalActual = "0.00";
                 }
                 clienteActual = linea.split("PEDIDO:")[0].trim();
                 Log.d(TAG, "DEBUG_PARSE_MULTI: Nuevo cliente detectado: " + clienteActual);
                 continue;
             }
 
-            ProductoModel producto = parseProductoConCliente(linea); // Usa ProductoModel
+            // 2. EXTRACCIÓN DEL TOTAL (Agregado aquí para que 'linea' sea reconocida)
+            if (linea.toLowerCase().contains("total")) {
+                // Pattern para capturar números con formato moneda tras la palabra "total"
+                Pattern pTotal = Pattern.compile("(?i)total[:\\s]*([\\d.,]+)");
+                Matcher mTotal = pTotal.matcher(linea);
+
+                if (mTotal.find()) {
+                    // Asignamos el valor numérico a nuestra variable temporal
+                    totalActual = mTotal.group(1).trim();
+                    Log.d(TAG, "Total extraído para " + clienteActual + ": " + totalActual);
+                    // No usamos continue para permitir que la lógica de productos revise la línea si fuera necesario
+                }
+            }
+
+            // 3. Procesamiento de productos (Lógica original)
+            ProductoModel producto = parseProductoConCliente(linea);
             if (producto != null) {
                 productosActuales.add(producto);
                 Log.d(TAG, "DEBUG_PARSE_MULTI: Producto añadido: " + producto.getDescripcion());
             }
-        }
+        } // <-- Aquí termina el bucle for
 
+        // 4. Guardado del último cliente procesado al finalizar el texto
         if (clienteActual != null && !productosActuales.isEmpty()) {
-            pedidos.add(new PedidoModel(clienteActual, productosActuales)); // Usa PedidoModel
+            pedidos.add(new PedidoModel(clienteActual, productosActuales, totalActual));
         }
 
         return pedidos;
@@ -413,23 +438,36 @@ public class PDFParser {
         return listaPedidos;
     }
 
-    /**
-     * Método auxiliar para parsear una línea de texto de producto
-     * en el contexto de un PDF de Cliente Único.
-     * @param linea La línea de texto a parsear.
-     * @return Un objeto ProductoModel si la línea coincide con el patrón, o null.
-     */
-    private static ProductoModel parseProductoClienteUnico(String linea) {
-        // Patrón para una línea de producto en formato: Código Descripción Cantidad Vlr.unit. Vlr.total
-        // Se espera que la descripción esté entre el código y la cantidad.
-        Pattern productoPattern = Pattern.compile(
-                "^\\s*([a-zA-Z0-9]+)\\s+(.*?)\\s+(\\d+)\\s+([\\d.,]+)\\s+([\\d.,]+)$"
-        );
-        Matcher matcher = productoPattern.matcher(linea.trim());
 
-        if (matcher.find() && matcher.groupCount() >= 5) {
-            String descripcion = matcher.group(2).trim(); // La descripción es el segundo grupo.
-            String cantidadStr = matcher.group(3).trim(); // La cantidad es el tercer grupo.
+
+    /**
+     * Parsea una línea de texto para extraer la cantidad y la descripción de un producto.
+     * El formato esperado de la línea es: Código Descripción Cantidad Vlr.unit. Vlr.total
+     * El código (alfanumérico o numérico) es detectado pero no se incluye en el ProductoModel.
+     *
+     * @param linea La cadena de texto que representa una línea de producto.
+     * @return Un objeto ProductoModel con la cantidad y descripción, o null si la línea no coincide con el patrón
+     * o si hay errores de parseo.
+     */
+    public static ProductoModel parseProductoClienteUnico(String linea) {
+        // Patrón para una línea de producto.
+        // - ^\\s*: Coincide con el inicio de la línea y cualquier espacio en blanco inicial opcional.
+        // - [a-zA-Z0-9]+: Coincide con el "Código" (uno o más caracteres alfanuméricos) pero NO LO CAPTURA.
+        // - \\s+: Coincide con uno o más espacios en blanco después del código.
+        // - (.+?): Captura la "Descripción" (uno o más caracteres, de forma no codiciosa). ESTE ES EL GRUPO 1.
+        // - \\s+: Coincide con uno o más espacios en blanco después de la descripción.
+        // - (\\d+): Captura la "Cantidad" (uno o más dígitos). ESTE ES EL GRUPO 2.
+        // - \\s+([\\d.,]+): Coincide con espacios y captura el "Vlr.unit." (dígitos, puntos o comas). ESTE ES EL GRUPO 3.
+        // - \\s+([\\d.,]+)$: Coincide con espacios y captura el "Vlr.total" hasta el final de la línea. ESTE ES EL GRUPO 4.
+        Pattern productoPattern = Pattern.compile(
+                "^\\s*[a-zA-Z0-9]+\\s+(.+?)\\s+(\\d+)\\s+([\\d.,]+)\\s+([\\d.,]+)$"
+        );
+        Matcher matcher = productoPattern.matcher(linea.trim()); // trim() para limpiar espacios al inicio/fin de la línea
+
+        // Verifica si el patrón coincide y si hay al menos los 4 grupos capturados que nos interesan (desc, cant, vlr_unit, vlr_total)
+        if (matcher.find() && matcher.groupCount() >= 4) {
+            String descripcion = matcher.group(1).trim(); // La descripción es el primer grupo capturado
+            String cantidadStr = matcher.group(2).trim(); // La cantidad es el segundo grupo capturado
 
             try {
                 if (cantidadStr.isEmpty()) {
@@ -439,17 +477,32 @@ public class PDFParser {
                 int cantidad = Integer.parseInt(cantidadStr);
 
                 if (!descripcion.isEmpty()) {
-                    return new ProductoModel(cantidad, descripcion); // Usa ProductoModel
+                    return new ProductoModel(cantidad, descripcion); // Crea y devuelve el ProductoModel
                 } else {
                     Log.w(TAG, "DEBUG_PARSE_CLIENTE_UNICO_PROD: Descripción vacía en línea: " + linea);
                 }
             } catch (NumberFormatException e) {
+                // Captura errores si la cantidad no es un número válido
                 Log.w(TAG, "DEBUG_PARSE_CLIENTE_UNICO_PROD: Error al parsear cantidad '" + cantidadStr + "' en línea: " + linea + " - " + e.getMessage());
             }
         } else {
-            // Loguear líneas que no coinciden con el patrón para depuración
-            // Log.d(TAG, "DEBUG_PARSE_CLIENTE_UNICO_PROD: Línea no coincide con patrón de producto: '" + linea + "'");
+            // Si la línea no coincide con el patrón esperado, se registra un mensaje de depuración.
+            Log.d(TAG, "DEBUG_PARSE_CLIENTE_UNICO_PROD: Línea no coincide con patrón de producto: '" + linea + "'");
         }
-        return null;
+        return null; // Devuelve null si no se pudo parsear
     }
+
+    /**
+     * Clase de utilidad de registro simple para demostración.
+     * Reemplaza esto con tu sistema de logging real (ej. android.util.Log, java.util.logging.Logger, slf4j).
+     */
+    static class Log {
+        public static void w(String tag, String msg) {
+            System.err.println("WARN - " + tag + ": " + msg); // Salida a error para advertencias
+        }
+        public static void d(String tag, String msg) {
+            System.out.println("DEBUG - " + tag + ": " + msg); // Salida estándar para depuración
+        }
+    }
+
 }

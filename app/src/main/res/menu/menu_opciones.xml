@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/opcion_crear_hoja"
+        android:title="Crear hoja de ruta" />
+
+    <item
+        android:id="@+id/opcion_ver_faltantes"
+        android:title="Ver art faltantes" />
+</menu>

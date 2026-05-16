@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper; // Importa Looper para Handler más moderno
-import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -27,7 +26,7 @@ public class SplashActivity extends AppCompatActivity {
             @Override
             public void run() {
                 // Crea un Intent para iniciar tu MainActivity
-                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                Intent intent = new Intent(SplashActivity.this, Pagprincipal.class);
                 startActivity(intent); // Inicia MainActivity
                 finish(); // Cierra SplashActivity para que el usuario no pueda volver a ella
             }

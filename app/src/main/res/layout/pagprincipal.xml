@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    OBJETIVO PRINCIPAL DE LA VISTA:
+    Representar el panel principal de la aplicación mediante una cuadrícula (Grid) interactiva de
+    MaterialCardViews, optimizando la paleta de colores, la respuesta táctil y la jerarquía visual.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#00040C"
+    tools:context=".Pagprincipal">
+
+    <!--
+        Overlay oscuro suave:
+        Controla el fondo general de la pantalla aplicando una capa de tono oscuro semi-transparente
+        para unificar la estética de la interfaz de usuario.
+    -->
+    <View
+        android:id="@+id/backgroundOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#4D000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+       />
+
+    <!--
+        Logo corporativo:
+        Muestra la identidad de la distribuidora centrado en la parte superior del panel.
+    -->
+    <ImageView
+        android:id="@+id/imageView2"
+        android:layout_width="240dp"
+        android:layout_height="100dp"
+        android:layout_marginTop="32dp"
+        android:src="@drawable/logodistrisinfondo"
+        android:scaleType="fitCenter"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!--
+        Título del Panel:
+        Texto principal que define la sección actual con tipografía limpia y de alta legibilidad.
+    -->
+    <TextView
+        android:id="@+id/textTitulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Panel Principal"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.02"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/imageView2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!--
+        Tarjeta Pedidos:
+        Botón de acceso a pedidos con un tono azul moderno y comportamiento interactivo (Ripple Effect).
+    -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardPedidos"
+        android:layout_width="160dp"
+        android:layout_height="170dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginEnd="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="#1E293B"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:strokeColor="#2F3E53"
+        app:strokeWidth="1.5dp"
+        app:layout_constraintTop_toBottomOf="@id/textTitulo"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/cardClientes"
+        app:layout_constraintHorizontal_chainStyle="packed">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <!-- Círculo de fondo suave para resaltar el icono -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@android:color/transparent">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:src="@android:drawable/ic_menu_agenda"
+                    app:tint="#38BDF8"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pedidos"
+                android:textColor="#F8FAFC"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!--
+        Tarjeta Clientes:
+        Botón de acceso al módulo de clientes, alineado horizontalmente con Pedidos.
+    -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardClientes"
+        android:layout_width="160dp"
+        android:layout_height="170dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="#1E293B"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:strokeColor="#2F3E53"
+        app:strokeWidth="1.5dp"
+        app:layout_constraintTop_toTopOf="@id/cardPedidos"
+        app:layout_constraintStart_toEndOf="@id/cardPedidos"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@android:color/transparent">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:src="@android:drawable/ic_menu_myplaces"
+                    app:tint="#34D399"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CC Clientes"
+                android:textColor="#F8FAFC"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!--
+        Tarjeta Productos:
+        Ubicada debajo de la tarjeta de Pedidos, mantiene consistencia en el tamaño y bordes.
+    -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardProductos"
+        android:layout_width="160dp"
+        android:layout_height="170dp"
+        android:layout_marginTop="24dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="#1E293B"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:strokeColor="#2F3E53"
+        app:strokeWidth="1.5dp"
+        app:layout_constraintTop_toBottomOf="@id/cardPedidos"
+        app:layout_constraintStart_toStartOf="@id/cardPedidos"
+        app:layout_constraintEnd_toEndOf="@id/cardPedidos">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@android:color/transparent">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:src="@android:drawable/ic_menu_sort_by_size"
+                    app:tint="#FB923C"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HOJA RUTA"
+                android:textColor="#F8FAFC"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!--
+        Tarjeta Configuración:
+        Ubicada debajo de la tarjeta de Clientes, completando el flujo de la grilla de navegación.
+    -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardConfig"
+        android:layout_width="160dp"
+        android:layout_height="170dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardBackgroundColor="#1E293B"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:strokeColor="#2F3E53"
+        app:strokeWidth="1.5dp"
+        app:layout_constraintTop_toTopOf="@id/cardProductos"
+        app:layout_constraintStart_toStartOf="@id/cardClientes"
+        app:layout_constraintEnd_toEndOf="@id/cardClientes">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@android:color/transparent">
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:src="@android:drawable/ic_menu_manage"
+                    app:tint="#94A3B8"/>
+            </FrameLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="STOCK"
+                android:textColor="#F8FAFC"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_marginTop="12dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

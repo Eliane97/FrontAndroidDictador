@@ -1,5 +1,5 @@
 // ProductoModel.java
-package com.example.myapplication; // Mantenemos tu paquete original
+package com.example.myapplication.model; // Mantenemos tu paquete original
 
 // Ya no es necesaria la importación de Gson si no se usa para serialización/deserialización
 // import com.google.gson.annotations.SerializedName;

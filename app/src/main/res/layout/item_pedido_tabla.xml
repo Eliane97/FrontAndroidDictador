@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="45dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:background="#131D31"
+    android:layout_marginBottom="1dp">
+
+    <TextView
+        android:id="@+id/tv_item_num"
+        android:layout_width="35dp"
+        android:layout_height="wrap_content"
+        android:textColor="#94A3B8"
+        android:textSize="12sp"
+        android:fontFamily="monospace" />
+
+    <TextView
+        android:id="@+id/tv_item_nombre"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/tv_item_importe"
+        android:layout_width="85dp"
+        android:layout_height="wrap_content"
+        android:textColor="#10B981"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:gravity="end"
+        android:layout_marginEnd="8dp" />
+
+    <ImageButton
+        android:id="@+id/btn_item_editar"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_edit"
+        android:contentDescription="Editar registro"
+        app:tint="#60A5FA" />
+
+    <ImageButton
+        android:id="@+id/btn_item_eliminar"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginStart="4dp"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="Eliminar registro"
+        app:tint="#EF4444" />
+
+</LinearLayout>

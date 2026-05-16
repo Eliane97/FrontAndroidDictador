@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.example.myapplication"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.myapplication"
-        minSdk = 23
-        targetSdk = 33
+        minSdk = 26
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -31,8 +31,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        // Define la compatibilidad de Java a la versión 17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        // En .kts, jvmTarget se asigna con "=" y requiere strings
+        jvmTarget = "17"
     }
 
     packagingOptions {
@@ -51,14 +57,22 @@ android {
 }
 
 dependencies {
+    androidTestImplementation("junit:junit:4.12")
+    // 1. Esto DEBE estar aquí para que Apache POI no de error en Android < 8.0
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.8.0")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.core:core-splashscreen:1.0.1")
 
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    // 2. Apache POI con la exclusión que ya pusiste (Correcto)
+    implementation("org.apache.poi:poi-ooxml:5.2.3") {
+        exclude(group = "org.apache.logging.log4j", module = "log4j-api")
+    }
 
-    implementation ("com.tom-roush:pdfbox-android:2.0.27.0")
+    // 3. Puente de logs (Tenías la línea repetida, con una basta)
+    implementation("org.slf4j:slf4j-android:1.7.36")
+
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
 }
