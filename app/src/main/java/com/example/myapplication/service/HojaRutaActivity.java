@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,9 +39,12 @@ import java.util.regex.Pattern;
  * OBJETIVO PRINCIPAL DE LA CLASE:
  * Gestionar la interfaz operativa del módulo de Hojas de Ruta de la Distribuidora.
  * Se encarga de capturar el texto crudo del informe, procesar flujos de datos iterativos continuos
- * para extraer de forma exacta cualquier cantidad variable de clientes, permitir la edición
- * interactiva de la grilla en memoria (CRUD) y exportar el resultado final a un documento
- * PDF dinámico multi-página, garantizando que no se corten los registros sin importar el volumen total.
+ * para extraer cualquier cantidad variable de clientes, permitir la edición interactiva de la
+ * grilla en memoria (CRUD) e interceptar la acción de exportación mediante un formulario de metadatos.
+ * Diseña el PDF optimizando el espacio al máximo: escribe la zona y las fechas una única vez al principio
+ * de la primera hoja y limpia los encabezados secundarios de las hojas de continuación para maximizar la grilla,
+ * soportando una paginación dinámica y fluida para volúmenes grandes de datos (hasta 200 ítems) mediante un
+ * control estricto de apertura y cierre formal de páginas de la API de Android.
  */
 public class HojaRutaActivity extends AppCompatActivity {
 
@@ -108,13 +112,13 @@ public class HojaRutaActivity extends AppCompatActivity {
         // EVENTO AGREGAR: Despliega la ventana modal configurada para inserción (-1)
         btnAgregar.setOnClickListener(v -> abrirDialogoElemento(-1));
 
-        // EVENTO COMPARTIR: Valida datos existentes y compila la matriz gráfica a PDF
+        // EVENTO COMPARTIR: Primero solicita los datos periféricos mediante un diálogo emergente
         btnCompartir.setOnClickListener(v -> {
             if (listaPedidosGlobal.isEmpty()) {
                 Toast.makeText(this, "La tabla está vacía. Añada o procese datos primero", Toast.LENGTH_SHORT).show();
                 return;
             }
-            exportarYDescargarPdfReal();
+            solicitarDatosPerifericosYExportar();
         });
 
         // EVENTO LIMPIAR: Vacía los búferes de memoria y las cajas de texto de la pantalla
@@ -165,22 +169,19 @@ public class HojaRutaActivity extends AppCompatActivity {
     private void abrirDialogoElemento(final int posicion) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        // Elementos de edición construidos de forma nativa para evitar dependencias infladas
         final EditText inputNombre = new EditText(this);
         inputNombre.setHint("Nombre del cliente");
         final EditText inputImporte = new EditText(this);
         inputImporte.setHint("Monto (Ej: 14500.50)");
         inputImporte.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
 
-        // Contenedor lineal para encapsular ambos campos verticalmente dentro de la alerta
-        android.widget.LinearLayout layoutModal = new android.widget.LinearLayout(this);
-        layoutModal.setOrientation(android.widget.LinearLayout.VERTICAL);
+        LinearLayout layoutModal = new LinearLayout(this);
+        layoutModal.setOrientation(LinearLayout.VERTICAL);
         layoutModal.setPadding(40, 20, 40, 20);
         layoutModal.addView(inputNombre);
         layoutModal.addView(inputImporte);
         builder.setView(layoutModal);
 
-        // Control de flujo: Determina si es una edición de fila o un registro en blanco
         if (posicion != -1) {
             ItemPedido existente = listaPedidosGlobal.get(posicion);
             inputNombre.setText(existente.nombre);
@@ -190,7 +191,6 @@ public class HojaRutaActivity extends AppCompatActivity {
             builder.setTitle("Añadir Cliente a Ruta");
         }
 
-        // Lógica de confirmación y guardado seguro del modal
         builder.setPositiveButton("Guardar", (dialog, which) -> {
             String name = inputNombre.getText().toString().trim().toUpperCase();
             String montoStr = inputImporte.getText().toString().trim();
@@ -198,12 +198,12 @@ public class HojaRutaActivity extends AppCompatActivity {
             if (!name.isEmpty() && !montoStr.isEmpty()) {
                 try {
                     double val = Double.parseDouble(montoStr);
-                    if (posicion != -1) { // Sobrescribe la entidad existente
+                    if (posicion != -1) {
                         ItemPedido p = listaPedidosGlobal.get(posicion);
                         p.nombre = name;
                         p.importe = val;
                         adaptadorTabla.notifyItemChanged(posicion);
-                    } else { // Inserta una nueva fila al final del array
+                    } else {
                         listaPedidosGlobal.add(new ItemPedido(name, val));
                         adaptadorTabla.notifyItemInserted(listaPedidosGlobal.size() - 1);
                     }
@@ -217,131 +217,214 @@ public class HojaRutaActivity extends AppCompatActivity {
     }
 
     /**
-     * Dibuja y genera vectorialmente las celdas de la Hoja de Ruta para su volcado a PDF.
-     * CORREGIDO: Soporta múltiples páginas de forma automática calculando los límites físicos del papel A4.
+     * Despliega una ventana modal interactiva para capturar los datos periféricos de logística
+     * requeridos antes de iniciar la construcción del archivo PDF.
      */
-    private void exportarYDescargarPdfReal() {
+    private void solicitarDatosPerifericosYExportar() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Datos Periféricos de la Ruta");
+
+        final EditText inputZona = new EditText(this);
+        inputZona.setHint("Zona de Reparto (Ej: Sierras / Centro)");
+
+        final EditText inputFechaVenta = new EditText(this);
+        inputFechaVenta.setHint("Fecha de Venta (Ej: 14/05/2026)");
+
+        final EditText inputFechaEntrega = new EditText(this);
+        inputFechaEntrega.setHint("Fecha de Entrega (Ej: 15/05/2026)");
+
+        LinearLayout layoutPerifericos = new LinearLayout(this);
+        layoutPerifericos.setOrientation(LinearLayout.VERTICAL);
+        layoutPerifericos.setPadding(44, 24, 44, 24);
+        layoutPerifericos.addView(inputZona);
+        layoutPerifericos.addView(inputFechaVenta);
+        layoutPerifericos.addView(inputFechaEntrega);
+        builder.setView(layoutPerifericos);
+
+        builder.setPositiveButton("Generar PDF", (dialog, which) -> {
+            String zona = inputZona.getText().toString().trim();
+            String fVenta = inputFechaVenta.getText().toString().trim();
+            String fEntrega = inputFechaEntrega.getText().toString().trim();
+
+            if (zona.isEmpty()) zona = "General";
+            if (fVenta.isEmpty()) fVenta = "-";
+            if (fEntrega.isEmpty()) fEntrega = "-";
+
+            exportarYDescargarPdfReal(zona, fVenta, fEntrega);
+        });
+
+        builder.setNegativeButton("Cancelar", null);
+        builder.show();
+    }
+
+    /**
+     * Dibuja y genera vectorialmente las celdas de la Hoja de Ruta para su volcado a PDF.
+     * CORREGIDO: Se reestructuró por completo el ciclo de vida de apertura/cierre de páginas de la API de Android.
+     */
+    private void exportarYDescargarPdfReal(String zonaParam, String fechaVentaParam, String fechaEntregaParam) {
         PdfDocument doc = new PdfDocument();
-        // Configura tamaño A4 estándar: 595 de ancho por 842 de alto (puntos PostScript)
+        // Definición del formato de página A4 estándar (595x842 puntos)
         PdfDocument.PageInfo pInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
 
-        // Arreglos de un solo elemento para poder modificar los objetos de página y canvas dentro del bloque Runnable
-        final PdfDocument.Page[] paginaActual = { doc.startPage(pInfo) };
-        final Canvas[] canvasActual = { paginaActual[0].getCanvas() };
+        // Inicializamos la primera página del documento de forma explícita
+        PdfDocument.Page paginaActual = doc.startPage(pInfo);
+        Canvas canvasActual = paginaActual.getCanvas();
 
         Paint p = new Paint();
         Paint tp = new Paint();
-        tp.setAntiAlias(true); // Suavizado de bordes tipográficos
+        tp.setAntiAlias(true);
 
-        // Definición matemática de coordenadas de columnas basadas en la planilla base
         String[] columnas = {"Num", "Nombre del cliente", "Importe", "Pago", "Debe", "Entrega", "Entregado/vuelto"};
         int[] posX = {30, 65, 230, 300, 365, 430, 500};
-        int altoF = 24; // Altura fija de cada renglón
+        int altoF = 24;
 
-        // Punteros mutables envueltos en matrices para actualización de referencias en sub-procesos
-        final int[] yAct = { 90 };
-        final int[] nroPagina = { 1 };
+        // Puntero vertical dinámico de coordenadas del lienzo Y
+        int yAct = 90;
+        int nroPagina = 1;
+        int limiteInferiorHoja = 760; // Línea de resguardo físico inferior seguro para la tabla
 
-        // Margen de seguridad antes de tocar el final de la hoja física (842)
-        int limiteInferiorHoja = 780;
+        // Imprime los datos base logísticos en la cabecera superior de la primera hoja
+        tp.setTextSize(9f); tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
+        canvasActual.drawText("Zona: " + zonaParam + "   |   F. Venta: " + fechaVentaParam + "   |   F. Entrega: " + fechaEntregaParam, 30, 50, tp);
 
-        // Sub-rutina lambda encargada de dibujar los rótulos fijos y membretes cada vez que nace una página
-        Runnable dibujarEncabezadoHoja = () -> {
-            // Renderizado del Membrete Comercial de la Distribuidora
-            tp.setTextSize(14f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
-            canvasActual[0].drawText("Distribuidora Godoy", 30, 45, tp);
+        // Configuración inicial de posiciones para arrancar la tabla en la primera hoja
+        yAct = 65;
 
-            tp.setTextSize(10f); tp.setFakeBoldText(false);
-            canvasActual[0].drawText("Reparto - Zona: Sierras", 30, 65, tp);
-            canvasActual[0].drawText("Pág. " + nroPagina[0], 520, 45, tp); // Indicador numérico de página activa
-            canvasActual[0].drawText("Fecha Entrega: Viern 15/05/26", 380, 65, tp);
+        // --- SUB-RUTINA DIRECTA PARA DIBUJAR CABECERAS ---
+        // Pintamos los títulos del reporte y las cabeceras de columnas sobre el lienzo activo actual
+        tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
+        canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
 
-            // Dibujo del bloque contenedor de la cabecera (Azul Institucional)
-            p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
-            canvasActual[0].drawRect(30, 90, 565, 90 + altoF, p);
+        tp.setTextSize(9f); tp.setFakeBoldText(false);
+        canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
 
-            // Rotulado de textos superiores dentro del rectángulo azul
-            tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
-            for (int j = 0; j < columnas.length; j++) {
-                canvasActual[0].drawText(columnas[j], posX[j] + 4, 90 + 15, tp);
-            }
+        p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
+        canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
 
-            p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
-            yAct[0] = 90 + altoF; // Restablece el cursor vertical justo debajo de los encabezados fijos
-        };
+        tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
+        for (int j = 0; j < columnas.length; j++) {
+            canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
+        }
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
+        yAct += altoF; // Posiciona el puntero Y justo debajo del encabezado que se acaba de pintar
 
-        // Ejecuta la impresión inicial del membrete para la hoja número uno
-        dibujarEncabezadoHoja.run();
         double totalGlobalAcumulado = 0;
 
-        // Ciclo principal de dibujo: Transfiere la lista total de memoria al lienzo vectorial
+        // Ciclo principal de dibujo: Vuelca todos los clientes de la lista al documento de manera fluida y multipágina
         for (int i = 0; i < listaPedidosGlobal.size(); i++) {
             ItemPedido item = listaPedidosGlobal.get(i);
 
-            // DETECCIÓN DE DESBORDE: Si la próxima celda excede los 780 puntos, salta de hoja de inmediato
-            if (yAct[0] + altoF > limiteInferiorHoja) {
-                doc.finishPage(paginaActual[0]); // Clausura y guarda el estado de la hoja llena
-                nroPagina[0]++; // Incrementa el contador general
+            // CORREGIDO: DETECCIÓN Y CAMBIO DE HOJA ESTRICTO
+            // Si la siguiente fila supera el límite de seguridad, cerramos la hoja previa y abrimos la que sigue secuencialmente
+            if (yAct + altoF > limiteInferiorHoja) {
+                doc.finishPage(paginaActual); // CORREGIDO: Cerramos FORMALMENTE la hoja que se llenó en el documento
+                nroPagina++; // Avanzamos el contador físico de páginas
 
-                paginaActual[0] = doc.startPage(pInfo); // Genera un nuevo lienzo en blanco
-                canvasActual[0] = paginaActual[0].getCanvas(); // Reasigna el canvas de dibujo operativo
+                paginaActual = doc.startPage(pInfo); // Instanciamos la nueva hoja en memoria
+                canvasActual = paginaActual.getCanvas(); // Obtenemos el nuevo lienzo limpio para seguir dibujando
 
-                dibujarEncabezadoHoja.run(); // Vuelve a estampar la cabecera azul en la hoja nueva
+                // Redibujamos el encabezado limpio y optimizado para hojas de continuación
+                yAct = 48; // Subimos el margen superior para ganar espacio físico para los ítems
+
+                tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
+                canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
+
+                tp.setTextSize(9f); tp.setFakeBoldText(false);
+                canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
+
+                p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
+                canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
+
+                tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
+                for (int j = 0; j < columnas.length; j++) {
+                    canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
+                }
+                p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
+                yAct += altoF; // Ajustamos el puntero debajo del nuevo header de la hoja de continuación
             }
 
-            // Efecto cebra para filas impares (Fondo gris tenue para agilizar la lectura del chofer)
+            // Efecto cebra para las celdas intercaladas de la grilla
             if (i % 2 == 1) {
                 p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#F1F5F9"));
-                canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
+                canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
                 p.setStyle(Paint.Style.STROKE); p.setColor(Color.parseColor("#94A3B8"));
             }
 
-            // Traza el marco exterior perimetral de la celda activa
-            canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
+            // Dibujo del borde rectangular externo de la fila actual
+            canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
             tp.setFakeBoldText(false); tp.setColor(Color.BLACK);
 
-            // Inyección de textos planos formateados dentro de sus respectivas columnas vectoriales
-            canvasActual[0].drawText(String.valueOf(i + 1), posX[0] + 4, yAct[0] + 15, tp);
-            canvasActual[0].drawText(item.nombre, posX[1] + 4, yAct[0] + 15, tp);
-            canvasActual[0].drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct[0] + 15, tp);
+            // Renderizado de textos dentro de las columnas correspondientes
+            canvasActual.drawText(String.valueOf(i + 1), posX[0] + 4, yAct + 15, tp);
+            canvasActual.drawText(item.nombre, posX[1] + 4, yAct + 15, tp);
+            canvasActual.drawText(String.format("$ %,.2f", item.importe), posX[2] + 4, yAct + 15, tp);
 
-            // Segmentación y trazado de líneas verticales divisorias
+            // Trazado de líneas verticales internas de separación de celdas
             for (int x : posX) {
-                if (x > 30) canvasActual[0].drawLine(x, yAct[0], x, yAct[0] + altoF, p);
+                if (x > 30) canvasActual.drawLine(x, yAct, x, yAct + altoF, p);
             }
             totalGlobalAcumulado += item.importe;
-            yAct[0] += altoF; // Desplaza el cursor vertical proporcionalmente al alto de fila
+            yAct += altoF; // Incrementamos el cursor vertical para la próxima iteración del bucle
         }
 
-        // VALIDACIÓN DE CIERRE PARA EL TOTAL: Si la fila final no entra en la última hoja, salta una más
-        if (yAct[0] + altoF > limiteInferiorHoja) {
-            doc.finishPage(paginaActual[0]);
-            nroPagina[0]++;
-            paginaActual[0] = doc.startPage(pInfo);
-            canvasActual[0] = paginaActual[0].getCanvas();
-            dibujarEncabezadoHoja.run();
+        // VALIDACIÓN DE ESPACIO FINAL PARA TOTALES Y CUADRO DE RENDICIÓN (Requiere un bloque mínimo de 100 puntos)
+        if (yAct + altoF + 100 > limiteInferiorHoja) {
+            doc.finishPage(paginaActual); // Cerramos la página actual porque no entran los totales
+            nroPagina++; // Incrementamos el número de página final
+            paginaActual = doc.startPage(pInfo); // Abrimos una página limpia de cierre
+            canvasActual = paginaActual.getCanvas(); // Obtenemos su lienzo
+
+            yAct = 48; // Seteamos posición superior inicial
+
+            tp.setTextSize(13f); tp.setFakeBoldText(true); tp.setColor(Color.parseColor("#121B2A"));
+            canvasActual.drawText("Distribuidora Godoy", 30, 35, tp);
+
+            tp.setTextSize(9f); tp.setFakeBoldText(false);
+            canvasActual.drawText("Pág. " + nroPagina, 530, 35, tp);
+
+            p.setStyle(Paint.Style.FILL); p.setColor(Color.parseColor("#1E3A8A"));
+            canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
+
+            tp.setTextSize(9f); tp.setFakeBoldText(true); tp.setColor(Color.WHITE);
+            for (int j = 0; j < columnas.length; j++) {
+                canvasActual.drawText(columnas[j], posX[j] + 4, yAct + 15, tp);
+            }
+            p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(0.8f); p.setColor(Color.parseColor("#94A3B8"));
+            yAct += altoF; // Posicionamos debajo del header final
         }
 
-        // Fila de clausura definitiva para el cálculo y muestra del Total General
+        // Fila de clausura para mostrar el subtotal/total general de la grilla
         p.setStyle(Paint.Style.STROKE); p.setColor(Color.parseColor("#94A3B8"));
-        canvasActual[0].drawRect(30, yAct[0], 565, yAct[0] + altoF, p);
+        canvasActual.drawRect(30, yAct, 565, yAct + altoF, p);
         tp.setFakeBoldText(true); tp.setColor(Color.BLACK);
-        canvasActual[0].drawText("TOTALES:", posX[1] + 4, yAct[0] + 15, tp);
-        canvasActual[0].drawText(String.format("$ %,.2f", totalGlobalAcumulado), posX[2] + 4, yAct[0] + 15, tp);
-        canvasActual[0].drawLine(posX[2], yAct[0], posX[2], yAct[0] + altoF, p);
+        canvasActual.drawText("TOTALES:", posX[1] + 4, yAct + 15, tp);
+        canvasActual.drawText(String.format("$ %,.2f", totalGlobalAcumulado), posX[2] + 4, yAct + 15, tp);
+        canvasActual.drawLine(posX[2], yAct, posX[2], yAct + altoF, p);
 
-        // Finaliza y cierra de forma segura la última hoja del lote procesado
-        doc.finishPage(paginaActual[0]);
+        yAct += altoF + 12; // Separación física prudencial entre la grilla y los bloques informativos finales
 
-        // Proceso de guardado en la carpeta compartida pública de descargas
+
+
+        // --- COLUMNA DERECHA: Cuadro de Rendición Manual del Repartidor---
+        p.setColor(Color.parseColor("#475569"));
+        canvasActual.drawRect(295, yAct, 565, yAct + 34, p);
+
+        tp.setFakeBoldText(false);
+        canvasActual.drawText("Plata + Fiado: ___________ %", 305, yAct + 14, tp);
+        canvasActual.drawText("Venta + Cobranza: ______________", 435, yAct + 14, tp);
+        canvasActual.drawText("Gasto: _______________Importe:____________", 305, yAct + 26, tp);
+
+        // CORREGIDO: Se cierra la última página activa del documento de manera formal
+        doc.finishPage(paginaActual);
+
+        // Canalización IO para volcar el documento PDF construido en el almacenamiento de descargas
         try {
-            File dest = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "HojaRuta_Sierras.pdf");
+            File dest = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "HojaRuta_Distribuidora.pdf");
             FileOutputStream out = new FileOutputStream(dest);
             doc.writeTo(out);
             out.close();
-            doc.close();
+            doc.close(); // Liberamos los descriptores de memoria del documento
 
-            // Envoltura segura del URI mediante FileProvider para evitar excepciones de exposición
             Uri safeUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", dest);
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("application/pdf");
@@ -349,7 +432,7 @@ public class HojaRutaActivity extends AppCompatActivity {
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(shareIntent, "Descargar y enviar PDF via:"));
         } catch (IOException e) {
-            Log.e(TAG, "Excepción crítica de guardado en disco", e);
+            Log.e(TAG, "Excepción de guardado en disco", e);
         }
     }
 
@@ -361,7 +444,6 @@ public class HojaRutaActivity extends AppCompatActivity {
         @NonNull
         @Override
         public TablaViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Infla el layout diseñado de celdas unitarias para la grilla
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_pedido_tabla, parent, false);
             return new TablaViewHolder(view);
         }
@@ -369,33 +451,27 @@ public class HojaRutaActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull TablaViewHolder holder, int position) {
             ItemPedido current = listaPedidosGlobal.get(position);
-            // Formatea el componente numérico sumándole base 1 para indexación humana
             holder.tvNum.setText(String.valueOf(position + 1));
             holder.tvNombre.setText(current.nombre);
             holder.tvImporte.setText(String.format("$ %,.2f", current.importe));
 
-            // Escuchador táctil asignado para alterar registros mediante modales emergentes
             holder.btnEditar.setOnClickListener(v -> abrirDialogoElemento(holder.getAdapterPosition()));
 
-            // Escuchador táctil asignado para el borrado físico de la fila en tiempo de ejecución
             holder.btnEliminar.setOnClickListener(v -> {
                 int pos = holder.getAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION) {
                     listaPedidosGlobal.remove(pos);
-                    notifyItemRemoved(pos); // Animación nativa de remoción
-                    notifyItemRangeChanged(pos, listaPedidosGlobal.size()); // Desplazamiento de índices remanentes
+                    notifyItemRemoved(pos);
+                    notifyItemRangeChanged(pos, listaPedidosGlobal.size());
                 }
             });
         }
 
         @Override
         public int getItemCount() {
-            return listaPedidosGlobal.size(); // Retorna el volumen actual de elementos de la lista
+            return listaPedidosGlobal.size();
         }
 
-        /**
-         * Contenedor de vistas interno para el mapeo de celdas.
-         */
         class TablaViewHolder extends RecyclerView.ViewHolder {
             TextView tvNum, tvNombre, tvImporte;
             ImageButton btnEditar, btnEliminar;
