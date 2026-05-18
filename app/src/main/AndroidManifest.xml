@@ -18,6 +18,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
         <activity
+            android:name=".service.ListaPreciosActivity"
+            android:exported="true">
+
+            <intent-filter android:label="Importar en Distribuidora Godoy">
+                <action android:name="android.content.Intent.ACTION_SEND" />
+                <category android:name="android.content.Intent.CATEGORY_DEFAULT" />
+
+                <data android:mimeType="*/*" />
+            </intent-filter>
+
+        </activity>
+        <activity
             android:name=".Pagprincipal"
             android:exported="false" />
         <activity

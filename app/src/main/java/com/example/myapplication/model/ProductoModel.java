@@ -10,11 +10,28 @@ public class ProductoModel {
     private int cantidad;
     // @SerializedName("descripcion")
     private String descripcion;
+    // NUEVO: Atributo para almacenar el costo o precio unitario del producto
+    private String precio;
 
+    public int getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(int codigo) {
+        this.codigo = codigo;
+    }
+
+    private int codigo;
     // Constructor añadido para facilitar la creación desde el parser
     public ProductoModel(int cantidad, String descripcion) {
         this.cantidad = cantidad;
         this.descripcion = descripcion;
+    }
+    public ProductoModel(int cantidad, String descripcion, String precio, int codigo) {
+        this.cantidad = cantidad;
+        this.descripcion = descripcion;
+        this.precio = precio; // Inicializa el nuevo atributo con el valor recibido
+        this.codigo= codigo;
     }
 
     public int getCantidad() {
@@ -33,8 +50,23 @@ public class ProductoModel {
         this.descripcion = descripcion;
     }
 
+    // NUEVO: Método Getter para recuperar el precio unitario
+    public String getPrecio() {
+        return precio;
+    }
+
+    // NUEVO: Método Setter para modificar el precio unitario si es necesario
+    public void setPrecio(String precio) {
+        this.precio = precio;
+    }
+
+    /**
+     * Sobrescribe el método toString estándar para formatear la salida del objeto de una forma
+     * completamente legible, ideal para depuración o registros rápidos en consola.
+     */
     @Override
     public String toString() {
-        return cantidad + " x " + descripcion;
+        // Retorna una cadena estructurada con el formato: "Cantidad x Descripción ($Precio)"
+        return cantidad + " x " + descripcion + " ($" + precio + ")";
     }
 }

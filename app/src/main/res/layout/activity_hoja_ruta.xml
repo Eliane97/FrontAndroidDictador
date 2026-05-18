@@ -10,24 +10,82 @@
     android:padding="16dp"
     tools:context=".service.HojaRutaActivity">
 
-    <TextView
-        android:id="@+id/tv_titulo_modulo"
-        android:layout_width="wrap_content"
+    <!-- ================================================================= -->
+    <!-- CONTENEDOR DE ENCABEZADO: Botones a los lados y títulos al centro   -->
+    <!-- ================================================================= -->
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Distribuidora Godoy"
-        android:textColor="#FFFFFF"
-        android:textSize="22sp"
-        android:fontFamily="sans-serif-medium" />
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp">
 
-    <TextView
-        android:id="@+id/tv_subtitulo_modulo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Gestión interactiva de Hoja de Ruta"
-        android:textColor="#94A3B8"
-        android:textSize="13sp"
-        android:layout_marginTop="2dp" />
+        <!-- Contenedor horizontal para agrupar los dos botones en el extremo izquierdo -->
+        <LinearLayout
+            android:id="@+id/container_botones_izq"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal">
 
+            <!-- Botón: Volver atrás -->
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Volver atrás"
+                android:padding="12dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/white" />
+
+
+
+        </LinearLayout>
+
+        <!-- Bloque de títulos centrado horizontalmente en la pantalla -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:id="@+id/tv_titulo_modulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="Distribuidora Godoy"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/tv_subtitulo_modulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gestión interactiva de Hoja de Ruta"
+                android:textColor="#94A3B8"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Nuevo Botón en el extremo derecho: Representación de lista de precios -->
+        <ImageButton
+            android:id="@+id/btn_lista_precios_der"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_agenda"
+            app:tint="@color/white" />
+
+    </RelativeLayout>
+
+    <!-- El resto de tu interfaz se mantiene exactamente igual -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardInputHolder"
         android:layout_width="match_parent"

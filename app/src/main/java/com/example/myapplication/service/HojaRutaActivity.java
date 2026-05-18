@@ -25,6 +25,7 @@ import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.myapplication.Pagprincipal;
 import com.example.myapplication.R;
 
 import java.io.File;
@@ -55,6 +56,8 @@ public class HojaRutaActivity extends AppCompatActivity {
     private EditText etDatosEntrada;
     private RecyclerView rvPedidos;
     private com.google.android.material.button.MaterialButton btnGenerar, btnCompartir, btnLimpiar, btnAgregar;
+    private ImageButton btnBack;
+    private ImageButton btnListaPreciosDer;
 
     // Estructura de datos global en memoria para sostener las filas de la tabla activa
     private final List<ItemPedido> listaPedidosGlobal = new ArrayList<>();
@@ -87,6 +90,8 @@ public class HojaRutaActivity extends AppCompatActivity {
         btnCompartir = findViewById(R.id.btn_compartir_excel);
         btnLimpiar = findViewById(R.id.btn_limpiar);
         btnAgregar = findViewById(R.id.btn_agregar_item);
+        btnBack = findViewById(R.id.btn_back);
+        btnListaPreciosDer = findViewById(R.id.btn_lista_precios_der);
 
         // Configuración estructural del RecyclerView en modo de lista lineal vertical
         rvPedidos.setLayoutManager(new LinearLayoutManager(this));
@@ -127,6 +132,49 @@ public class HojaRutaActivity extends AppCompatActivity {
             listaPedidosGlobal.clear();
             adaptadorTabla.notifyDataSetChanged();
         });
+        // Configura el listener para detectar el evento de click sobre el botón de regreso
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Invoca la función personalizada encargada de realizar la navegación hacia atrás
+                navegarAPantallaPrincipal();
+            }
+        });
+        // Configura el evento de escucha para detectar cuando se presiona el botón de la agenda/lista
+        btnListaPreciosDer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Ejecuta la rutina de transición para abrir el catálogo de precios
+                navegarAListaPrecios();
+            }
+        });
+    }
+    /**
+     * Inicia el flujo visual abriendo la pantalla dedicada a la Lista de Precios.
+     */
+    private void navegarAListaPrecios() {
+        // Crea la intención de navegación dirigida a la clase encargada de los precios
+        Intent intent = new Intent(HojaRutaActivity.this, ListaPreciosActivity.class);
+
+        // Inicia la actividad superponiéndola en la pila de pantallas del dispositivo
+        startActivity(intent);
+    }
+    /**
+     * Función encargada de gestionar el flujo de navegación para retornar a la pantalla principal.
+     * Utiliza un Intent limpio para evitar la acumulación innecesaria de actividades en la pila.
+     */
+    private void navegarAPantallaPrincipal() {
+        // Crea un objeto Intent para definir la transición desde la actividad actual hacia MainActivity
+        Intent intent = new Intent(HojaRutaActivity.this, Pagprincipal.class);
+
+        // Añade flags para limpiar la pila de actividades, asegurando que MainActivity se reinicie o pase al frente
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        // Inicia la ejecución de la nueva actividad especificada en el Intent
+        startActivity(intent);
+
+        // Finaliza la actividad actual (HojaRutaActivity) para removerla por completo del flujo de la pantalla
+        finish();
     }
 
     /**
