@@ -34,6 +34,19 @@
         android:textStyle="bold"
         app:backgroundTint="#10B981"
         app:cornerRadius="12dp" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_descargar_pdf"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="8dp"
+        android:text="DESCARGAR LISTA EN PDF"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        app:backgroundTint="#2B6CB0"
+        app:icon="@android:drawable/ic_menu_save"
+        app:iconGravity="textStart"
+        app:cornerRadius="12dp" />
 
     <!-- Cabecera de la tabla de resultados -->
     <LinearLayout
@@ -72,6 +85,7 @@
             android:textSize="12sp"
             android:gravity="end" />
     </LinearLayout>
+
 
     <!-- Lista donde se cargarán los productos extraídos -->
     <androidx.recyclerview.widget.RecyclerView

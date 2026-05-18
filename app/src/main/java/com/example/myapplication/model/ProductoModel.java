@@ -13,6 +13,16 @@ public class ProductoModel {
     // NUEVO: Atributo para almacenar el costo o precio unitario del producto
     private String precio;
 
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    private String categoria;
+
     public int getCodigo() {
         return codigo;
     }
