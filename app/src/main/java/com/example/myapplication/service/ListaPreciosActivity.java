@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -236,6 +237,20 @@ public class ListaPreciosActivity extends AppCompatActivity {
     }
 
     /**
+     * MAIN OBJECTIVE: Realizar una limpieza final preventiva sobre la descripción del artículo,
+     * normalizando formatos de comillas comerciales y asegurando la estabilidad del texto.
+     */
+    private String desinfectarTextoOcr(String texto) {
+        if (texto == null) return "";
+
+        return texto
+                // Normaliza comillas dobles especiales que suelen romper la estética del catálogo
+                .replace("â€œ", "\"")
+                .replace("â€\u009d", "\"")
+                .replace("\"", "") // Quita comillas remanentes para que no ensucien el lienzo del PDF
+                .trim();
+    }
+    /**
      * Intercepta el Intent de inicio. Si fue disparado por el botón "Compartir" de WhatsApp,
      * extrae los metadatos reales del archivo para asegurar que sea un formato CSV válido y lo lee.
      */
@@ -327,15 +342,18 @@ public class ListaPreciosActivity extends AppCompatActivity {
     }
 
     /**
-     * Abre el flujo secuencial de bytes del archivo real, decodifica el texto plano
-     * renglón por renglón y consolida el string masivo para el parser.
+     * MAIN OBJECTIVE: Abre el flujo secuencial de bytes del archivo real, aplicando codificación
+     * ISO-8859-1 (Windows Latin 1) para interpretar correctamente los archivos exportados por Excel
+     * y asegurar que las tildes y eñes se lean de forma nativa sin romperse.
      */
     private void leerArchivoSeleccionado(Uri uri) {
         try {
             InputStream inputStream = getContentResolver().openInputStream(uri);
             if (inputStream == null) return;
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            // CAMBIO CLAVE: Cambiamos UTF_8 por "ISO-8859-1". Esto lee de forma directa y nativa
+            // las planillas generadas por Excel en español con sus tildes y eñes perfectas.
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "ISO-8859-1"));
             StringBuilder stringBuilder = new StringBuilder();
             String linea;
 
@@ -346,6 +364,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
             reader.close();
             inputStream.close();
 
+            // Delega la cadena con las tildes ya perfectamente interpretadas al algoritmo de extracción
             importarCatalogoDesdeCsv(stringBuilder.toString());
 
         } catch (IOException e) {
@@ -353,35 +372,43 @@ public class ListaPreciosActivity extends AppCompatActivity {
             Toast.makeText(this, "Error crítico al abrir el flujo físico del archivo", Toast.LENGTH_SHORT).show();
         }
     }
-
     /**
      * MAIN OBJECTIVE:
      * Procesar el catálogo de Distribuidora Godoy clasificando los artículos mediante las listas
-     * de códigos e insertando de forma secuencial y ordenada los elementos para la UI del RecyclerView.
+     * de códigos, sanitizando caracteres rotos (tildes/eñes) e insertando de forma secuencial
+     * y ordenada los elementos para la UI del RecyclerView.
      */
     private void importarCatalogoDesdeCsv(String csvContent) {
         try {
+            // Inicializa el lector de cadenas en memoria para procesar línea por línea
             BufferedReader reader = new BufferedReader(new StringReader(csvContent));
             String linea;
 
+            // Limpia la lista global antes de la nueva importación para evitar duplicados
             listaProductos.clear();
 
+            // Estructura el mapa temporal respetando el orden secuencial de las categorías
             Map<String, List<ProductoModel>> mapaCategorias = new LinkedHashMap<>();
             for (String cat : nombresCategorias) {
                 mapaCategorias.put(cat, new ArrayList<ProductoModel>());
             }
 
+            // Abre el archivo de preferencias persistentes para recuperar clasificaciones manuales previas
             SharedPreferences memoriaCategorias = getSharedPreferences("MemoriaCodigosGodoy", MODE_PRIVATE);
 
+            // Variable de control para detectar dinámicamente la columna del precio mayorista
             int posPrecioVentaFijo = -1;
 
+            // Bucle principal de lectura del archivo CSV
             while ((linea = reader.readLine()) != null) {
 
+                // Descarta renglones vacíos o encabezados institucionales de metadatos de la planilla
                 if (linea.trim().isEmpty() || linea.startsWith("Versión") ||
                         linea.startsWith("Representada") || linea.startsWith("Vendedor")) {
                     continue;
                 }
 
+                // Identifica el divisor de columnas: prioriza punto y coma, o procesa comas respetando celdas entrecomilladas
                 String[] columnas;
                 if (linea.contains(";")) {
                     columnas = linea.split(";", -1);
@@ -389,6 +416,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
                     columnas = linea.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
                 }
 
+                // Detecta la fila de títulos para encontrar el índice exacto de la columna "Vlr. unit."
                 if (columnas.length > 0 && (columnas[0].contains("Cód. producto") || columnas[0].contains("Código"))) {
                     for (int i = 0; i < columnas.length; i++) {
                         String cabecera = columnas[i].replace("\"", "").trim();
@@ -397,35 +425,46 @@ public class ListaPreciosActivity extends AppCompatActivity {
                             break;
                         }
                     }
-                    continue;
+                    continue; // Salta a la siguiente línea ya que esta fue solo de configuración estructural
                 }
 
+                // Determina el índice de lectura del precio: usa el dinámico encontrado o el valor por defecto (columna 3)
                 int indiceFinalAProcesar = (posPrecioVentaFijo != -1) ? posPrecioVentaFijo : 3;
 
+                // Valida que la fila tenga las columnas suficientes para extraer los datos básicos
                 if (columnas.length > indiceFinalAProcesar && columnas.length >= 2) {
 
+                    // Aísla y limpia las comillas y espacios de los tres campos requeridos
                     String strCodigo = columnas[0].replace("\"", "").trim();
                     String strDescripcion = columnas[1].replace("\"", "").trim();
                     String strPrecio = columnas[indiceFinalAProcesar].replace("\"", "").trim();
 
+                    // Ignora celdas incompletas, vacías o artículos con código de control "0"
                     if (strCodigo.isEmpty() || strPrecio.isEmpty() || strCodigo.equals("0") || strDescripcion.isEmpty()) {
                         continue;
                     }
 
+                    // CORRECCIÓN CLAVE: Sanea en caliente los símbolos rotos antes de instanciar el modelo de datos
+                    strDescripcion = desinfectarTextoOcr(strDescripcion);
+
                     try {
+                        // Convierte el string del código a un entero primitivo para las búsquedas numéricas
                         int codigoProducto = Integer.parseInt(strCodigo);
                         int cantidadPorDefecto = 0;
 
+                        // Instancia el objeto de negocio con la descripción y codificación ya reparadas
                         ProductoModel nuevoProducto = new ProductoModel(cantidadPorDefecto, strDescripcion, strPrecio, codigoProducto);
 
                         String categoriaDestino = "";
 
+                        // Determina el rubro comercial consultando la memoria de SharedPreferences o los sets estáticos fijos
                         if (memoriaCategorias.contains(String.valueOf(codigoProducto))) {
                             categoriaDestino = memoriaCategorias.getString(String.valueOf(codigoProducto), "");
                         } else {
                             categoriaDestino = obtenerCategoriaPorCodigo(codigoProducto);
                         }
 
+                        // Si se identificó la categoría, se añade el producto a su grupo; si no, se le pregunta al usuario
                         if (!categoriaDestino.isEmpty() && mapaCategorias.containsKey(categoriaDestino)) {
                             mapaCategorias.get(categoriaDestino).add(nuevoProducto);
                         } else {
@@ -433,13 +472,16 @@ public class ListaPreciosActivity extends AppCompatActivity {
                         }
 
                     } catch (NumberFormatException nfe) {
+                        // Captura errores si el código extraído de la columna no es un número válido
                         nfe.printStackTrace();
                     }
                 }
             }
 
+            // Cierra el flujo del lector en memoria
             reader.close();
 
+            // Vuelca de manera secuencial los productos agrupados del mapa a la lista principal de la UI
             for (String cabecera : nombresCategorias) {
                 List<ProductoModel> articulosDeSeccion = mapaCategorias.get(cabecera);
                 if (articulosDeSeccion != null && !articulosDeSeccion.isEmpty()) {
@@ -447,15 +489,16 @@ public class ListaPreciosActivity extends AppCompatActivity {
                 }
             }
 
+            // Notifica los cambios estructurales al adaptador para refrescar inmediatamente el RecyclerView
             productoAdapter.notifyDataSetChanged();
             Toast.makeText(this, "Catálogo importado y clasificado con éxito.", Toast.LENGTH_SHORT).show();
 
         } catch (IOException e) {
+            // Captura fallas de lectura o corrupción en el flujo de datos del string
             e.printStackTrace();
             Toast.makeText(this, "Falla crítica al interpretar el archivo CSV.", Toast.LENGTH_SHORT).show();
         }
     }
-
     /**
      * MAIN OBJECTIVE: Mostrar un diálogo interactivo tipo lista en el hilo de la interfaz de usuario (UI Thread)
      * para que el preventista asigne un código de producto nuevo a una categoría existente.
