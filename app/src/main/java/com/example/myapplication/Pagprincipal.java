@@ -6,16 +6,12 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
 
+import com.example.myapplication.service.Duplicados;
 import com.example.myapplication.service.HojaRutaActivity;
 import com.example.myapplication.service.Pedidos;
 import com.google.android.material.card.MaterialCardView;
 
 
-/**
- * OBJETIVO PRINCIPAL DE LA CLASE:
- * Gestionar la interacción del usuario en el Panel Principal, vinculando los componentes visuales
- * (MaterialCardViews) del layout con la lógica de navegación hacia las distintas secciones de la aplicación.
- */
 public class Pagprincipal extends AppCompatActivity {
 
     // Declaración de las variables globales para las tarjetas interactivas del menú
@@ -23,6 +19,7 @@ public class Pagprincipal extends AppCompatActivity {
     private MaterialCardView cardClientes;
     private MaterialCardView cardProductos;
     private MaterialCardView cardConfig;
+    private MaterialCardView cardDuplicados;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +42,9 @@ public class Pagprincipal extends AppCompatActivity {
         cardClientes = findViewById(R.id.cardClientes);
         cardProductos = findViewById(R.id.cardProductos);
         cardConfig = findViewById(R.id.cardConfig);
+
+        // CORREGIDO: Asignamos directamente a la variable global sin redeclarar el tipo
+        cardDuplicados = findViewById(R.id.cardDuplicados);
     }
 
     /**
@@ -56,41 +56,49 @@ public class Pagprincipal extends AppCompatActivity {
         cardPedidos.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Crea un Intent para pasar de la pantalla actual a la actividad de Pedidos
                 Intent intent = new Intent(Pagprincipal.this, Pedidos.class);
                 startActivity(intent);
             }
         });
 
-       /* // Configura el clic para la sección de Cuenta Corriente de Clientes
+        /* // Configura el clic para la sección de Cuenta Corriente de Clientes
         cardClientes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Crea un Intent para pasar de la pantalla actual a la actividad de Clientes
                 Intent intent = new Intent(Pagprincipal.this, ClientesActivity.class);
                 startActivity(intent);
             }
-        });*/
+        });
+        */
 
         // Configura el clic para la sección de Hoja de Ruta
         cardProductos.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Crea un Intent para pasar de la pantalla actual a la actividad de Hoja de Ruta
                 Intent intent = new Intent(Pagprincipal.this, HojaRutaActivity.class);
                 startActivity(intent);
             }
         });
-        /*
 
+        // Configura el clic para la sección de Duplicados
+        cardDuplicados.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Asegúrate de que tu actividad se llame DuplicadosActivity o Duplicados según corresponda
+                Intent intent = new Intent(Pagprincipal.this, Duplicados.class);
+                startActivity(intent);
+            }
+        });
+
+        /*
         // Configura el clic para la sección de Control de Stock
         cardConfig.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Crea un Intent para pasar de la pantalla actual a la actividad de Stock
                 Intent intent = new Intent(Pagprincipal.this, StockActivity.class);
                 startActivity(intent);
             }
-        });*/
+        });
+        */
     }
 }

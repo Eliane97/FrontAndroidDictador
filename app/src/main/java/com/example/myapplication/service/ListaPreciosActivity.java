@@ -70,7 +70,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> selectorArchivoLauncher;
 
     // Sets globales de códigos por proveedor para centralizar y unificar la clasificación en toda la app
-    private Set<Integer> codigosPascuas;
+    private Set<Integer> codigosChocolates;
     private Set<Integer> codigosLerithier;
     private Set<Integer> codigosNevares;
     private Set<Integer> codigosImportadora;
@@ -78,25 +78,25 @@ public class ListaPreciosActivity extends AppCompatActivity {
     private Set<Integer> codigosAnalgesicos;
     private Set<Integer> codigosPerfumeria;
     private Set<Integer> codigosPoxipol;
-    private Set<Integer> codigosPrime;
+    private Set<Integer> codigosBuhl;
     private Set<Integer> codigosKaufer;
     private Set<Integer> codigosTrio;
     private Set<Integer> codigosCigarrillos;
     private Set<Integer> codigosVarios;
     private Set<Integer> codigosYerbas;
+    private Set<Integer> codigosTostis;
 
     // Array estático con el orden de las categorías del backend para persistencia e importación inicial
     private final String[] nombresCategorias = {
-            "Pascuas", "Lerithier", "Nevares", "Importadora Sudamericana",
-            "Quento", "Analgesicos", "Perfumeria", "Poxipol", "Varios",
-            "Prime", "Kaufer", "Trio", "Cigarrillos", "Yerbas"
+            "Lerithier", "Nevares", "Trio","Buhl","Importadora Sudamericana","Tostis", "Kaufer", "Yerbas", "Quento",
+            "Poxipol",  "Varios","Chocolates","Analgesicos","Perfumeria","Cigarrillos"
     };
 
     // RE-ORDENAMIENTO EXIGIDO PARA EL PDF:
     // Array estático de referencia que dicta la secuencia numérica exacta de renderizado en el catálogo impreso.
     private final String[] nombresCategoriasPdf = {
-            "Lerithier", "Nevares", "Importadora Sudamericana", "Quento", "Analgesicos",
-            "Perfumeria", "Poxipol", "Prime", "Kaufer", "Trio", "Varios", "Yerbas", "Cigarrillos"
+            "Lerithier", "Nevares", "Trio","Buhl","Importadora Sudamericana","Tostis", "Kaufer", "Yerbas", "Quento",
+            "Poxipol", "Varios","Chocolates","Analgesicos","Cigarrillos"
     };
 
     @Override
@@ -157,11 +157,11 @@ public class ListaPreciosActivity extends AppCompatActivity {
      * a cada proveedor de la distribuidora para garantizar búsquedas en tiempo constante O(1).
      */
     private void inicializarColeccionesDeCodigos() {
-        codigosPascuas = new HashSet<>(Arrays.asList(493, 248, 540, 474, 473, 492, 496));
+        codigosChocolates = new HashSet<>(Arrays.asList(493, 248, 540, 474, 473, 492, 496));
         codigosLerithier = new HashSet<>(Arrays.asList(
                 44, 25, 23, 416, 506, 503, 50, 51, 49, 35, 37, 36, 31, 19, 32, 449, 15, 22, 505, 17,
                 412, 498, 499, 33, 34, 504, 507, 451, 502, 29, 26, 27, 14, 28, 410, 414, 447, 448,
-                400, 42, 358, 18, 16, 40, 508, 510, 450, 403, 20, 30, 24, 46, 47, 45, 501, 409, 500, 21, 43, 41
+                 42, 358, 18, 16, 40, 508, 510, 450, 403, 20, 30, 24, 46, 47, 45, 501, 409, 500, 21, 43, 41
         ));
         codigosNevares = new HashSet<>(Arrays.asList(
                 154, 153, 152, 167, 166, 170, 169, 150, 151, 168, 164, 165, 537, 538, 161, 160, 159, 155,
@@ -190,7 +190,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
         codigosPoxipol = new HashSet<>(Arrays.asList(
                 200, 196, 187, 188, 186, 185, 184, 189, 192, 193, 190, 191, 199, 194, 195, 198, 197
         ));
-        codigosPrime = new HashSet<>(Arrays.asList(
+        codigosBuhl = new HashSet<>(Arrays.asList(
                 74, 401, 60, 64, 55, 70, 73, 71, 72, 62, 68, 67, 63, 65, 58, 56, 57, 66, 59, 61, 213, 212, 69, 80, 214, 79, 78
         ));
         codigosKaufer = new HashSet<>(Arrays.asList(
@@ -207,19 +207,31 @@ public class ListaPreciosActivity extends AppCompatActivity {
         codigosVarios = new HashSet<>(Arrays.asList(
                 233, 230, 229, 239, 240, 232, 231, 355, 531, 512, 511, 381, 532, 526, 530, 527,
                 528, 529, 426, 427, 247, 494, 235, 238, 236, 237, 251, 234, 472, 471, 224, 242,
-                509, 222, 357, 246, 514, 438, 415
+                509, 222, 357, 246, 514, 438, 415,400
         ));
         codigosYerbas = new HashSet<>(Arrays.asList(
                 405, 413, 87, 408, 407, 368, 406, 452, 516
         ));
+        codigosTostis = new HashSet<>(Arrays.asList(
+                548,
+                545,
+                546,
+                547,
+                553,
+                554,
+                555,
+                556,549,550
+        ));
     }
+
 
     /**
      * MAIN OBJECTIVE: Centralizar la verificación posicional y analítica de un código de producto.
      * Evalúa si pertenece a un Set estático predefinido y devuelve el nombre de la categoría exacta.
      */
     private String obtenerCategoriaPorCodigo(int codigo) {
-        if (codigosPascuas.contains(codigo)) return "Pascuas";
+        if (codigosChocolates.contains(codigo)) return "Chocolates";
+        if (codigosTostis.contains(codigo)) return "Tostis";
         if (codigosLerithier.contains(codigo)) return "Lerithier";
         if (codigosNevares.contains(codigo)) return "Nevares";
         if (codigosImportadora.contains(codigo)) return "Importadora Sudamericana";
@@ -227,7 +239,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
         if (codigosAnalgesicos.contains(codigo)) return "Analgesicos";
         if (codigosPerfumeria.contains(codigo)) return "Perfumeria";
         if (codigosPoxipol.contains(codigo)) return "Poxipol";
-        if (codigosPrime.contains(codigo)) return "Prime";
+        if (codigosBuhl.contains(codigo)) return "Buhl";
         if (codigosKaufer.contains(codigo)) return "Kaufer";
         if (codigosTrio.contains(codigo)) return "Trio";
         if (codigosCigarrillos.contains(codigo)) return "Cigarrillos";
@@ -457,11 +469,15 @@ public class ListaPreciosActivity extends AppCompatActivity {
 
                         String categoriaDestino = "";
 
-                        // Determina el rubro comercial consultando la memoria de SharedPreferences o los sets estáticos fijos
-                        if (memoriaCategorias.contains(String.valueOf(codigoProducto))) {
-                            categoriaDestino = memoriaCategorias.getString(String.valueOf(codigoProducto), "");
-                        } else {
-                            categoriaDestino = obtenerCategoriaPorCodigo(codigoProducto);
+                        categoriaDestino = obtenerCategoriaPorCodigo(codigoProducto);
+
+                        if (categoriaDestino.isEmpty() &&
+                                memoriaCategorias.contains(String.valueOf(codigoProducto))) {
+
+                            categoriaDestino = memoriaCategorias.getString(
+                                    String.valueOf(codigoProducto),
+                                    ""
+                            );
                         }
 
                         // Si se identificó la categoría, se añade el producto a su grupo; si no, se le pregunta al usuario
@@ -550,35 +566,34 @@ public class ListaPreciosActivity extends AppCompatActivity {
 
     /**
      * MAIN OBJECTIVE:
-     * Renderizar el catálogo sobre el Canvas incrementando el tamaño tipográfico de los artículos
-     * y compactando el espacio vertical entre filas para que la descripción y el precio se visualicen
-     * más grandes, juntos y alineados simétricamente en una hoja A4.
+     * Renderizar el catálogo sobre el Canvas incrementando el tamaño tipográfico de los artículos,
+     * compactando el espacio vertical, alineando simétricamente en una columna fija las descripciones
+     * y exportando los archivos con marcas de tiempo dinámicas (fecha y hora) para evitar sobreescrituras.
      */
     private void construirArchivoPdfGenuino(String nombreArchivo, boolean incluirCigarrillos) {
         // 1. Instancia el orquestador nativo para la composición y renderizado de páginas PDF
         PdfDocument documento = new PdfDocument();
 
-        // 2. Definición y configuración estética de pinceles gráficos (Paint)
-        Paint pincelTitulo = new Paint();
+        // 2. Definición y configuración estética de pinceles gráficos (Paint) con soporte SANS_SERIF para caracteres latinos
+        Paint pincelTitulo = new Paint(Paint.ANTI_ALIAS_FLAG);
         pincelTitulo.setColor(Color.parseColor("#1A365D")); // Tono azul oscuro corporativo
         pincelTitulo.setTextSize(22f);
-        pincelTitulo.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        pincelTitulo.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
-        Paint pincelCategoria = new Paint();
+        Paint pincelCategoria = new Paint(Paint.ANTI_ALIAS_FLAG);
         pincelCategoria.setColor(Color.parseColor("#2B6CB0")); // Azul medio para identificar secciones
         pincelCategoria.setTextSize(13f);
-        pincelCategoria.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        pincelCategoria.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
 
-        // CORRECCIÓN: Se aumentó el tamaño de 9.5f a 12f para que la descripción se vea más grande
-        Paint pincelTexto = new Paint();
+        Paint pincelTexto = new Paint(Paint.ANTI_ALIAS_FLAG);
         pincelTexto.setColor(Color.parseColor("#2D3748")); // Gris oscuro de alta densidad
         pincelTexto.setTextSize(12f);
+        pincelTexto.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)); // Asegura renderizado nativo de tildes/eñes
 
-        // CORRECCIÓN: Se aumentó el tamaño de 9.5f a 12f para emparejarlo con la descripción
-        Paint pincelPrecio = new Paint();
+        Paint pincelPrecio = new Paint(Paint.ANTI_ALIAS_FLAG);
         pincelPrecio.setColor(Color.parseColor("#2B6CB0")); // Azul comercial
         pincelPrecio.setTextSize(12f);
-        pincelPrecio.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        pincelPrecio.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
         pincelPrecio.setTextAlign(Paint.Align.RIGHT); // Alineación a la derecha matemática
 
         Paint pincelLinea = new Paint();
@@ -600,11 +615,11 @@ public class ListaPreciosActivity extends AppCompatActivity {
         lienzo.drawText("DISTRIBUIDORA GODOY", 40, coordenadaY, pincelTitulo);
         coordenadaY += 20;
 
-        Paint pincelSub = new Paint();
+        Paint pincelSub = new Paint(Paint.ANTI_ALIAS_FLAG);
         pincelSub.setColor(Color.parseColor("#718096"));
         pincelSub.setTextSize(9.5f);
-        pincelSub.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
-        lienzo.drawText("Lista de Precios Oficial — Organizada por Categorías", 40, coordenadaY, pincelSub);
+        pincelSub.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC));
+        lienzo.drawText("Lista de Precios Oficial ", 40, coordenadaY, pincelSub);
         coordenadaY += 40;
 
         // 6. MAPEO Y AGRUPACIÓN: Prepara la estructura respetando el orden solicitado para el PDF
@@ -622,11 +637,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
         // Agrupa cada artículo de la lista actual usando la lógica unificada de códigos
         for (ProductoModel p : listaProductos) {
             String destino = "";
-            if (memoriaCategorias.contains(String.valueOf(p.getCodigo()))) {
-                destino = memoriaCategorias.getString(String.valueOf(p.getCodigo()), "");
-            } else {
-                destino = obtenerCategoriaPorCodigo(p.getCodigo());
-            }
+            destino = obtenerCategoriaPorCodigo(p.getCodigo());
 
             if (destino.isEmpty()) {
                 destino = "Varios";
@@ -682,16 +693,21 @@ public class ListaPreciosActivity extends AppCompatActivity {
                     coordenadaY = 60; // Margen de gracia superior
                 }
 
-                // Imprime la descripción y el precio compartiendo la misma coordenada Y (misma línea horizontal)
-                String lineaArticulo = prod.getCodigo() + " - " + prod.getDescripcion();
-                lienzo.drawText(lineaArticulo, 45, coordenadaY, pincelTexto);
+                // ALINEACIÓN COLUMNARE: Isolamos el código y fijamos el inicio de todas las descripciones exactamente en X = 85
+                String strCodigo = String.valueOf(prod.getCodigo());
+                String strDescripcion = prod.getDescripcion();
+
+                lienzo.drawText(strCodigo, 45, coordenadaY, pincelTexto); // Código pegado a la izquierda
+                lienzo.drawText(strDescripcion, 85, coordenadaY, pincelTexto); // Las letras iniciales quedan 100% en línea recta vertical
+
+                // El precio se mantiene alineado a la derecha matemática
                 lienzo.drawText("$ " + prod.getPrecio(), anchoPagina - 45, coordenadaY, pincelPrecio);
 
-// Traza la sutil línea horizontal justo debajo del texto
+                // Traza la sutil línea horizontal justo debajo del texto
                 coordenadaY += 4;
                 lienzo.drawLine(40, coordenadaY, anchoPagina - 40, coordenadaY, pincelLinea);
 
-// CORRECCIÓN: Se redujo el incremento de 14 a 11 para compactar las filas y juntar más los renglones
+                // Incremento compacto para juntar más los renglones
                 coordenadaY += 11;
             }
             coordenadaY += 10; // Espaciado entre categorías
@@ -700,17 +716,26 @@ public class ListaPreciosActivity extends AppCompatActivity {
         // 8. CIERRE LOGÍSTICO Y ESCRITURA EN DISCO FÍSICO
         documento.finishPage(paginaActual);
 
+        // OBTENCIÓN DE FECHA Y HORA DINÁMICA: Formato año-mes-día_hora-minutos (ej: 2026-05-18_2205)
+        java.text.SimpleDateFormat formateador = new java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.getDefault());
+        String timestamp = formateador.format(new java.util.Date());
+
+        // Modificamos el nombre inyectándole el timestamp justo antes de la extensión .pdf
+        String nombreModificado = nombreArchivo.replace(".pdf", "_" + timestamp + ".pdf");
+
         File rutaDescargas = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File archivoPdfFinal = new File(rutaDescargas, nombreArchivo);
+        File archivoPdfFinal = new File(rutaDescargas, nombreModificado);
 
         try {
+            // Ejecuta la persistencia física del archivo en el storage
             documento.writeTo(new FileOutputStream(archivoPdfFinal));
-            Toast.makeText(this, "Descargado: " + nombreArchivo, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Descargado: " + nombreModificado, Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error de escritura en: " + nombreArchivo, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error al guardar el archivo PDF físico", Toast.LENGTH_SHORT).show();
         } finally {
-            documento.close(); // Libera la memoria nativa del documento
+            // Cierra el documento de manera imperativa para liberar recursos del framework
+            documento.close();
         }
     }
 }

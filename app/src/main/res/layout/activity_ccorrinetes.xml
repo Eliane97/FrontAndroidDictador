@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Objective: Interface for the Accounts Receivable (Cuentas Corrientes) view.
+    Provides fast, one-tap filtering by geographical zones and a live search input
+    for delivery personnel in the field.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#010F1C">
+
+    <!-- Search Header: Clean card containing the live input text element -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp">
+
+        <EditText
+            android:id="@+id/etSearchClient"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@android:color/transparent"
+            android:hint="Buscar cliente o número de pedido..."
+            android:paddingHorizontal="16dp"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="12dp"
+            android:inputType="textPersonName"
+            android:textSize="15sp" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Zone Selector Filter: Horizontal scrollbar for immediate navigation between locations -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="12dp"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupZones"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipAll"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Todos"
+                android:checked="true" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipDespenaderos"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Despeñaderos" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipBerrotaran"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Berrotarán" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSierras"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sierras" />
+
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipRioTercero"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Río Tercero" />
+
+
+
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <!-- Main List View Container: Renders filtered items in real time -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPendingDebts"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+
+        android:paddingBottom="16dp" />
+
+</LinearLayout>
