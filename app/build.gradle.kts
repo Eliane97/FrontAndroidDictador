@@ -31,9 +31,10 @@ android {
         }
     }
     compileOptions {
-        // Define la compatibilidad de Java a la versión 17
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        // En Kotlin DSL, se usa el signo igual '=' y la propiedad cambia ligeramente:
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {

@@ -11,7 +11,25 @@ public class ProductoModel {
     // @SerializedName("descripcion")
     private String descripcion;
     // NUEVO: Atributo para almacenar el costo o precio unitario del producto
-    private String precio;
+    private String precioUnitario;
+    private String precioTotaldelProducto;
+    private String categoria;
+
+    public String getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(String precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public String getPrecioTotaldelProducto() {
+        return precioTotaldelProducto;
+    }
+
+    public void setPrecioTotaldelProducto(String precioTotaldelProducto) {
+        this.precioTotaldelProducto = precioTotaldelProducto;
+    }
 
     public String getCategoria() {
         return categoria;
@@ -21,7 +39,7 @@ public class ProductoModel {
         this.categoria = categoria;
     }
 
-    private String categoria;
+
 
     public int getCodigo() {
         return codigo;
@@ -37,11 +55,21 @@ public class ProductoModel {
         this.cantidad = cantidad;
         this.descripcion = descripcion;
     }
-    public ProductoModel(int cantidad, String descripcion, String precio, int codigo) {
+
+    public ProductoModel(int cantidad, String descripcion, String precioUnitario, int codigo) {
         this.cantidad = cantidad;
         this.descripcion = descripcion;
-        this.precio = precio; // Inicializa el nuevo atributo con el valor recibido
-        this.codigo= codigo;
+        this.precioUnitario = precioUnitario;
+        this.codigo = codigo;
+    }
+
+    public ProductoModel(int cantidad, String descripcion, String precioUnitario, String precioTotaldelProducto, String categoria, int codigo) {
+        this.cantidad = cantidad;
+        this.descripcion = descripcion;
+        this.precioUnitario = precioUnitario;
+        this.precioTotaldelProducto = precioTotaldelProducto;
+        this.categoria = categoria;
+        this.codigo = codigo;
     }
 
     public int getCantidad() {
@@ -62,12 +90,12 @@ public class ProductoModel {
 
     // NUEVO: Método Getter para recuperar el precio unitario
     public String getPrecio() {
-        return precio;
+        return precioUnitario;
     }
 
     // NUEVO: Método Setter para modificar el precio unitario si es necesario
     public void setPrecio(String precio) {
-        this.precio = precio;
+        this.precioUnitario = precio;
     }
 
     /**
@@ -77,6 +105,6 @@ public class ProductoModel {
     @Override
     public String toString() {
         // Retorna una cadena estructurada con el formato: "Cantidad x Descripción ($Precio)"
-        return cantidad + " x " + descripcion + " ($" + precio + ")";
+        return cantidad + " x " + descripcion + " ($" + precioUnitario + ")";
     }
 }

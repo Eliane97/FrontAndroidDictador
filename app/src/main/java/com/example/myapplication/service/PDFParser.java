@@ -504,5 +504,78 @@ public class PDFParser {
             System.out.println("DEBUG - " + tag + ": " + msg); // Salida estándar para depuración
         }
     }
+//---------------------Funcionalidad extraer datos para duplicados-----------------------------------
+private static List<ProductoModel> extraerProductosDeBloque(String bloque) {
+    List<ProductoModel> prods = new ArrayList<>();
 
+    // Nueva Regex más robusta:
+    // 1: Código, 2: Cantidad, 3: Descripción, 4: Precio Unitario, 5: Total
+    // Explicación:
+    // ^(\d+)\s+             -> Captura el código inicial
+    // (\d+)\s+              -> Captura la cantidad
+    // (.+?)\s+              -> Captura la descripción (todo hasta encontrar el precio)
+    // ([\d.]+)\s+           -> Captura valor unitario
+    // ([\d.]+)$             -> Captura valor total
+    Pattern p = Pattern.compile("^(\\d+)\\s+(\\d+)\\s+(.+?)\\s+([\\d.]+)\\s+([\\d.]+)$", Pattern.MULTILINE);
+    Matcher m = p.matcher(bloque);
+
+    while (m.find()) {
+        try {
+            prods.add(new ProductoModel(
+                    Integer.parseInt(m.group(2)), // Cantidad
+                    m.group(3).trim(),            // Descripción
+                    m.group(4),                  // Precio Unitario
+                    m.group(5),                  // Precio Total
+                    "General",                   // Categoría
+                    Integer.parseInt(m.group(1)) // Código
+            ));
+        } catch (Exception e) {
+            // Loguear error pero no detener el proceso
+        }
+    }
+    return prods;
+}public static List<PedidoModel> parseEstructurado(String textoCompleto) {
+        List<PedidoModel> listaPedidos = new ArrayList<>();
+
+        // Dividimos por bloques basándonos en que cada bloque de cliente
+        // suele empezar con el nombre y termina con un total.
+        // Esta expresión divide el texto en segmentos que contienen la info de cada cliente.
+        String[] bloques = textoCompleto.split("(?m)^(?=[A-Z])(?=.*PEDIDO:)");
+
+        for (String bloque : bloques) {
+            if (!bloque.contains("PEDIDO:")) continue;
+
+            // 1. Extraer Nombre, Pedido, Fecha, Hora
+            // Nota: El uso de Pattern.DOTALL permite que el regex salte líneas
+            Pattern headerPattern = Pattern.compile("(.+?)\\s+PEDIDO:(\\d+)\\s+Fecha:(\\d{2}/\\d{2}/\\d{4})\\s+(\\d{2}:\\d{2})", Pattern.DOTALL);
+            Matcher mHeader = headerPattern.matcher(bloque);
+
+            String nombre = "Desconocido", nroPedido = "0", fechaHora = "";
+            if (mHeader.find()) {
+                nombre = mHeader.group(1).trim();
+                nroPedido = mHeader.group(2);
+                fechaHora = mHeader.group(3) + " " + mHeader.group(4);
+            }
+
+            // 2. Extraer Monto Total
+            Pattern totalPattern = Pattern.compile("Total:\\$\\s*([\\d.,]+)", Pattern.MULTILINE);
+            Matcher mTotal = totalPattern.matcher(bloque);
+            String montoTotal = mTotal.find() ? mTotal.group(1).replace(",", ".") : "0.00";
+
+            // 3. Procesar Productos (Usando tu lógica original)
+            List<ProductoModel> productos = new ArrayList<>();
+            String[] lineas = bloque.split("\\r?\\n");
+            for (String linea : lineas) {
+                // Usamos tu método existente que ya sabes que funciona
+                ProductoModel prod = parseProductoConCliente(linea);
+                if (prod != null) {
+                    productos.add(prod);
+                }
+            }
+
+            // 4. Crear el modelo con TODOS los datos
+            listaPedidos.add(new PedidoModel(nroPedido, fechaHora, nombre, montoTotal, productos));
+        }
+        return listaPedidos;
+    }
 }

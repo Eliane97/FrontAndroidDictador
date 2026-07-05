@@ -1,98 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F8FAFC"
-    android:padding="16dp"
-    tools:context=".DuplicadosActivity">
+    android:padding="16dp">
 
-    <RelativeLayout
+    <Button
+        android:id="@+id/btnImportar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="20dp">
+        android:text="Importar PDF de Pedidos" />
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerInParent="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Volver"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="#1E293B" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="Generar Duplicados de Pedidos"
-            android:textColor="#1E293B"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-    </RelativeLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginBottom="20dp"
-        app:boxBackgroundColor="#FFFFFF"
-        app:boxCornerRadiusBottomEnd="12dp"
-        app:boxCornerRadiusBottomStart="12dp"
-        app:boxCornerRadiusTopEnd="12dp"
-        app:boxCornerRadiusTopStart="12dp"
-        app:boxStrokeColor="#10B981"
-        app:hintTextColor="#10B981">
-
-        <EditText
-            android:id="@+id/et_datos_entrada"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/txtResultado"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="top|start"
-            android:hint="Pegue aquí el texto completo de los pedidos..."
-            android:inputType="textMultiLine"
-            android:scrollbars="vertical"
-            android:textColor="#334155"
-            android:textSize="15sp" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_height="wrap_content"
+            android:text="Los datos aparecerán aquí..." />
+    </ScrollView>
 
-    <LinearLayout
+    <Button
+        android:id="@+id/btnCompartir"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="2">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_limpiar"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="56dp"
-            android:layout_weight="0.6"
-            android:layout_marginEnd="8dp"
-            android:text="Limpiar"
-            android:textAllCaps="false"
-            android:textColor="#64748B"
-            android:textSize="15sp"
-            app:cornerRadius="12dp"
-            app:strokeColor="#CBD5E1" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_compartir_excel"
-            style="@style/Widget.MaterialComponents.Button"
-            android:layout_width="0dp"
-            android:layout_height="56dp"
-            android:layout_weight="1.4"
-            android:text="Procesar y Compartir PDF"
-            android:textAllCaps="false"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:backgroundTint="#10B981"
-            app:cornerRadius="12dp"
-            app:icon="@android:drawable/ic_menu_share" />
-    </LinearLayout>
-
+        android:text="Compartir Resumen"
+        android:enabled="false" />
 </LinearLayout>
