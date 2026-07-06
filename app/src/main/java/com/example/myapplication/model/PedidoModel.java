@@ -79,9 +79,9 @@ public class PedidoModel {
         sb.append("Fecha: ").append(fechayHoraPedido).append("\n");
         sb.append("Productos:\n");
         for (ProductoModel p : productos) {
-            sb.append("- ").append(p.getCantidad()).append(" ").append(p.getDescripcion())
-                    .append(" | ").append(p.getPrecioTotaldelProducto()).append("\n");
-        }
+            sb.append(p.getCantidad()).append(" x ").append(p.getDescripcion())
+                    .append(" | Unit: $").append(p.getPrecioUnitario())
+                    .append(" | Total: $").append(p.getPrecioTotaldelProducto()).append("\n");}
         sb.append("TOTAL: $").append(total);
         return sb.toString();
     }

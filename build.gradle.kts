@@ -8,7 +8,7 @@ buildscript {
 
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.1") // <-- VERIFICA/AJUSTA VERSIÓN
+        classpath("com.android.tools.build:gradle:8.1.1"); // <-- VERIFICA/AJUSTA VERSIÓN
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0") // <-- VERIFICA/AJUSTA VERSIÓN
     }
 }

@@ -505,36 +505,30 @@ public class PDFParser {
         }
     }
 //---------------------Funcionalidad extraer datos para duplicados-----------------------------------
-private static List<ProductoModel> extraerProductosDeBloque(String bloque) {
-    List<ProductoModel> prods = new ArrayList<>();
+private static ProductoModel procesarLineaProducto(String linea) {
+    // Regex diseñada para: [Código] [Cant] [Desc] [PrecUnit] [PrecTotal]
+    // Captura: 1:Código, 2:Cant, 3:Desc, 4:PrecUnit, 5:Total
+    // Usamos [\d.,]+ para soportar puntos y comas en precios
+    Pattern p = Pattern.compile("^(\\d+)\\s+(\\d+)\\s+(.+?)\\s+([\\d.,]+)\\s+([\\d.,]+)$");
+    Matcher m = p.matcher(linea.trim());
 
-    // Nueva Regex más robusta:
-    // 1: Código, 2: Cantidad, 3: Descripción, 4: Precio Unitario, 5: Total
-    // Explicación:
-    // ^(\d+)\s+             -> Captura el código inicial
-    // (\d+)\s+              -> Captura la cantidad
-    // (.+?)\s+              -> Captura la descripción (todo hasta encontrar el precio)
-    // ([\d.]+)\s+           -> Captura valor unitario
-    // ([\d.]+)$             -> Captura valor total
-    Pattern p = Pattern.compile("^(\\d+)\\s+(\\d+)\\s+(.+?)\\s+([\\d.]+)\\s+([\\d.]+)$", Pattern.MULTILINE);
-    Matcher m = p.matcher(bloque);
-
-    while (m.find()) {
+    if (m.find()) {
         try {
-            prods.add(new ProductoModel(
-                    Integer.parseInt(m.group(2)), // Cantidad
-                    m.group(3).trim(),            // Descripción
-                    m.group(4),                  // Precio Unitario
-                    m.group(5),                  // Precio Total
-                    "General",                   // Categoría
-                    Integer.parseInt(m.group(1)) // Código
-            ));
+            return new ProductoModel(
+                    Integer.parseInt(m.group(2)),          // Cantidad
+                    m.group(3).trim(),                     // Descripción
+                    m.group(4).replace(",", "."),          // Precio Unitario
+                    m.group(5).replace(",", "."),          // Precio Total
+                    "General",                             // Categoría
+                    Integer.parseInt(m.group(1))           // Código
+            );
         } catch (Exception e) {
-            // Loguear error pero no detener el proceso
+            return null;
         }
     }
-    return prods;
-}public static List<PedidoModel> parseEstructurado(String textoCompleto) {
+    return null;
+}
+public static List<PedidoModel> parseEstructurado(String textoCompleto) {
         List<PedidoModel> listaPedidos = new ArrayList<>();
 
         // Dividimos por bloques basándonos en que cada bloque de cliente
@@ -562,12 +556,12 @@ private static List<ProductoModel> extraerProductosDeBloque(String bloque) {
             Matcher mTotal = totalPattern.matcher(bloque);
             String montoTotal = mTotal.find() ? mTotal.group(1).replace(",", ".") : "0.00";
 
-            // 3. Procesar Productos (Usando tu lógica original)
+            // 3. Procesar Productos
             List<ProductoModel> productos = new ArrayList<>();
             String[] lineas = bloque.split("\\r?\\n");
             for (String linea : lineas) {
-                // Usamos tu método existente que ya sabes que funciona
-                ProductoModel prod = parseProductoConCliente(linea);
+                // Aquí llamamos al nuevo método unificado
+                ProductoModel prod = procesarLineaProducto(linea);
                 if (prod != null) {
                     productos.add(prod);
                 }

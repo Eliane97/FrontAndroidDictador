@@ -76,4 +76,11 @@ dependencies {
 
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
+        // PDFBox para Android
+        implementation ("org.apache.pdfbox:pdfbox:3.0.0")
+
+        // Opcional: Para soporte de imágenes y fuentes si es necesario
+        implementation ("commons-logging:commons-logging:1.2")
+
+
 }
