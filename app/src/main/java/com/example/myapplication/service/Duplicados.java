@@ -23,6 +23,7 @@ package com.example.myapplication.service;
         import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
         import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
         import java.io.File;
+        import java.io.IOException;
         import java.io.InputStream;
         import java.util.List;
 
@@ -90,82 +91,121 @@ public class Duplicados extends AppCompatActivity {
     }private void dibujarRemito(PDPageContentStream cs, PedidoModel p, int yBase) throws Exception {
         int margenIzq = 40;
         int anchoTotal = 520;
+        int altoFijo = 350; // Siempre la mitad de la hoja
 
-        // 1. CABECERA
+        // ---- Columnas fijas (bordes derechos para alinear números) ----
+        float colCantX       = margenIzq + 10;
+        float colDescX       = margenIzq + 55;
+        float colUnitRightX  = margenIzq + 440;
+        float colTotalRightX = margenIzq + 510;
+
+        // 1. MARCO EXTERIOR (posición y tamaño SIEMPRE fijos, media hoja, esquinas redondeadas)
+        cs.setStrokingColor(0f, 0f, 0f);
+        cs.setLineWidth(1f);
+        drawRoundedRect(cs, margenIzq, yBase - altoFijo, anchoTotal, altoFijo, 10f);
+        cs.stroke();
+
+        // 2. CABECERA (posición fija)
         cs.setNonStrokingColor(0.05f, 0.25f, 0.55f);
-        cs.beginText();
-        cs.setFont(PDType1Font.HELVETICA_BOLD, 14);
-        cs.newLineAtOffset(margenIzq, yBase);
-        cs.showText("DISTRIBUIDORA GODOY");
-        cs.endText();
+        drawLeftText(cs, PDType1Font.HELVETICA_BOLD, 13, "DISTRIBUIDORA GODOY", margenIzq + 10, yBase - 20);
 
         cs.setNonStrokingColor(0f, 0f, 0f);
-        cs.beginText();
-        cs.setFont(PDType1Font.HELVETICA, 9);
-        cs.newLineAtOffset(margenIzq, yBase - 15);
-        cs.showText("Cliente: " + p.getCliente() + " | Pedido: " + p.getNumeroPedido() + " | Fecha: " + p.getFechayHoraPedido());
-        cs.endText();
+        drawLeftText(cs, PDType1Font.HELVETICA, 8,
+                "Cliente: " + p.getCliente() + " | Pedido: " + p.getNumeroPedido() + " | Fecha: " + p.getFechayHoraPedido(),
+                margenIzq + 10, yBase - 35);
 
-        // 2. ENCABEZADOS DE TABLA
-        float yHeader = yBase - 40;
+        // 3. ENCABEZADOS DE TABLA (posición fija, alineados a sus columnas)
+        float yHeader = yBase - 55;
+        drawLeftText(cs, PDType1Font.HELVETICA_BOLD, 8, "Cant.", colCantX, yHeader);
+        drawLeftText(cs, PDType1Font.HELVETICA_BOLD, 8, "Descripción", colDescX, yHeader);
+        drawRightText(cs, PDType1Font.HELVETICA_BOLD, 8, "Vlr. Unit.", colUnitRightX, yHeader);
+        drawRightText(cs, PDType1Font.HELVETICA_BOLD, 8, "Vlr. Total", colTotalRightX, yHeader);
+
         cs.setLineWidth(1f);
-        cs.moveTo(margenIzq, yHeader - 5); cs.lineTo(margenIzq + anchoTotal, yHeader - 5); cs.stroke();
+        cs.moveTo(margenIzq, yHeader - 5);
+        cs.lineTo(margenIzq + anchoTotal, yHeader - 5);
+        cs.stroke();
 
-        cs.beginText();
-        cs.setFont(PDType1Font.HELVETICA_BOLD, 9);
-        cs.newLineAtOffset(margenIzq + 5, yHeader);
-        cs.showText("Cant.");
-        cs.newLineAtOffset(50, 0); cs.showText("Descripción");
+        // ---- Zona de items: alto disponible FIJO, sin importar cuántos productos haya ----
+        float yItemsTop = yHeader - 15;
+        float yItemsBottom = yBase - altoFijo + 78; // reserva espacio para total + firma
+        float availableHeight = yItemsTop - yItemsBottom;
 
-        // Alineación derecha: x = margenIzq + anchoTotal
-        float xVlrUnit = margenIzq + 450;
-        float xVlrTotal = margenIzq + 520;
+        List<ProductoModel> productos = p.getProductos();
+        int n = Math.max(productos.size(), 1);
 
-        cs.newLineAtOffset(350, 0); cs.showText("Vlr. Unit.");
-        cs.newLineAtOffset(70, 0); cs.showText("Vlr. Total");
-        cs.endText();
+        float rowHeight = Math.min(13f, availableHeight / n);
+        rowHeight = Math.max(rowHeight, 6f);
+        float fontSize = Math.min(8f, rowHeight - 2f);
+        fontSize = Math.max(fontSize, 5f);
 
-        // 3. PRODUCTOS
-        int yLinea = (int) (yHeader - 20);
-        for (ProductoModel prod : p.getProductos()) {
-            cs.beginText();
-            cs.setFont(PDType1Font.HELVETICA, 9);
-            cs.newLineAtOffset(margenIzq + 5, yLinea);
-            cs.showText(String.valueOf(prod.getCantidad()));
-            cs.newLineAtOffset(50, 0);
-            cs.showText(prod.getDescripcion());
-            cs.endText();
+        float yLinea = yItemsTop;
 
-            // Precios alineados a la derecha usando cálculos simples
+        // 4. PRODUCTOS (misma data/lógica original, solo re-dibujada con alineación exacta)
+        for (ProductoModel prod : productos) {
+            String sCant = String.valueOf(prod.getCantidad());
+            String sDesc = prod.getDescripcion();
             String sUnit = "$" + prod.getPrecioUnitario();
             String sTotal = "$" + prod.getPrecioTotaldelProducto();
 
-            cs.beginText();
-            cs.newLineAtOffset(xVlrUnit - (sUnit.length() * 5), yLinea); // Ajuste manual simple
-            cs.showText(sUnit);
-            cs.newLineAtOffset(70, 0);
-            cs.showText(sTotal);
-            cs.endText();
+            drawLeftText(cs, PDType1Font.HELVETICA, fontSize, sCant, colCantX, yLinea);
+            drawLeftText(cs, PDType1Font.HELVETICA, fontSize, sDesc, colDescX, yLinea);
+            drawRightText(cs, PDType1Font.HELVETICA, fontSize, sUnit, colUnitRightX, yLinea);
+            drawRightText(cs, PDType1Font.HELVETICA, fontSize, sTotal, colTotalRightX, yLinea);
 
-            yLinea -= 15;
+            yLinea -= rowHeight;
         }
 
-        // 4. TOTAL (Rectángulo inferior)
-        cs.setNonStrokingColor(0.9f, 0.9f, 0.9f); // Fondo gris claro
-        cs.addRect(margenIzq + 350, yLinea - 10, 170, 20);
-        cs.fill();
+        // 5. TOTAL A PAGAR — recuadro verde SIN RELLENO (solo contorno), posición fija
+        float yTotalBox = yBase - altoFijo + 50;
+        cs.setStrokingColor(0.0f, 0.6f, 0.0f); // Verde
+        cs.setLineWidth(1.5f);
+        cs.addRect(margenIzq + 350, yTotalBox, 170, 20);
+        cs.stroke(); // solo contorno, nunca fill()
+
+        cs.setNonStrokingColor(0.0f, 0.4f, 0.0f);
+        drawLeftText(cs, PDType1Font.HELVETICA_BOLD, 9, "MONTO TOTAL: $" + p.getTotal(), margenIzq + 360, yTotalBox + 7);
+
+        // 6. FIRMA — línea tenue + texto "Firma: Recibí conforme" (posición fija, alineada a la izquierda)
+        cs.setStrokingColor(0.6f, 0.6f, 0.6f);
+        cs.setLineWidth(0.5f);
+        cs.moveTo(margenIzq + 10, yBase - altoFijo + 25);
+        cs.lineTo(margenIzq + 210, yBase - altoFijo + 25);
+        cs.stroke();
 
         cs.setNonStrokingColor(0f, 0f, 0f);
-        cs.beginText();
-        cs.setFont(PDType1Font.HELVETICA_BOLD, 10);
-        cs.newLineAtOffset(margenIzq + 360, yLinea - 5);
-        cs.showText("TOTAL A PAGAR: $" + p.getTotal());
-        cs.endText();
+        drawLeftText(cs, PDType1Font.HELVETICA, 7, "Firma: Recibí conforme", margenIzq + 50, yBase - altoFijo + 15);
+        cs.setStrokingColor(0f, 0f, 0f); // Reset color a negro
 
-        // 5. MARCO EXTERIOR
-        cs.setStrokingColor(0f, 0f, 0f);
-        cs.addRect(margenIzq - 5, yLinea - 30, anchoTotal + 10, (yBase - yLinea) + 40);
-        cs.stroke();
+    }
+
+    private void drawLeftText(PDPageContentStream cs, PDType1Font font, float fontSize, String text, float x, float y) throws IOException {
+        cs.beginText();
+        cs.setFont(font, fontSize);
+        cs.newLineAtOffset(x, y);
+        cs.showText(text);
+        cs.endText();
+    }
+
+    private void drawRightText(PDPageContentStream cs, PDType1Font font, float fontSize, String text, float rightX, float y) throws IOException {
+        float width = font.getStringWidth(text) / 1000f * fontSize;
+        cs.beginText();
+        cs.setFont(font, fontSize);
+        cs.newLineAtOffset(rightX - width, y);
+        cs.showText(text);
+        cs.endText();
+    }
+    private void drawRoundedRect(PDPageContentStream cs, float x, float y, float width, float height, float radius) throws IOException {
+        cs.moveTo(x + radius, y);
+        cs.lineTo(x + width - radius, y);
+        cs.curveTo(x + width - radius, y, x + width, y, x + width, y + radius);
+        cs.lineTo(x + width, y + height - radius);
+        cs.curveTo(x + width, y + height - radius, x + width, y + height, x + width - radius, y + height);
+        cs.lineTo(x + radius, y + height);
+        cs.curveTo(x + radius, y + height, x, y + height, x, y + height - radius);
+        cs.lineTo(x, y + radius);
+        cs.curveTo(x, y + radius, x, y, x + radius, y);
+        cs.closePath();
     }
     private void compartirArchivo(File file) {
         // Fíjate que ahora termina en .fileprovider para coincidir con tu manifiesto
