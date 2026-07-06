@@ -74,14 +74,12 @@ public class Duplicados extends AppCompatActivity {
                 PDPage page = new PDPage();
                 document.addPage(page);
                 try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
-                    // Remito Superior (Original)
-                    dibujarRemito(cs, listaPedidos.get(i), 780, true);
+                    // Remito Superior
+                    dibujarRemito(cs, listaPedidos.get(i), 780);
 
-
-
-                    // Remito Inferior (Duplicado, si hay otro)
+                    // Remito Inferior (si hay otro)
                     if (i + 1 < listaPedidos.size()) {
-                        dibujarRemito(cs, listaPedidos.get(i + 1), 420, false);
+                        dibujarRemito(cs, listaPedidos.get(i + 1), 420);
                     }
                 }
             }
@@ -93,7 +91,7 @@ public class Duplicados extends AppCompatActivity {
         }
     }
 
-    private void dibujarRemito(PDPageContentStream cs, PedidoModel p, int yBase, boolean esOriginal) throws Exception {
+    private void dibujarRemito(PDPageContentStream cs, PedidoModel p, int yBase) throws Exception {
         int margenIzq = 40;
         int anchoTotal = 520;
         int altoFijo = 350; // Siempre la mitad de la hoja
@@ -128,30 +126,24 @@ public class Duplicados extends AppCompatActivity {
         String lineaPedido = "PEDIDO: " + p.getNumeroPedido() + "  |  Fecha: " + p.getFechayHoraPedido();
         drawRightText(cs, PDType1Font.HELVETICA_BOLD, 8, lineaPedido, xDer - 12, yBase - 32);
 
-        // Condición + badge ORIGINAL/DUPLICADO
+        // Condición
         String condicion = "Condición: Débito / Al Contado"; // <-- reemplazar por p.getCondicion() si existe
-        String estado = esOriginal ? "ORIGINAL" : "DUPLICADO";
 
         PDFont fontCond = PDType1Font.HELVETICA_BOLD;
         float fsCond = 8f;
-        float wEstado = fontCond.getStringWidth(estado) / 1000f * fsCond + 12; // + padding badge
         float yCond = yBase - 44;
 
-        drawRightText(cs, fontCond, fsCond, condicion + "   ", xDer - 12 - wEstado, yCond);
+        cs.setNonStrokingColor(0.1f, 0.1f, 0.1f);
+        drawRightText(cs, fontCond, fsCond, condicion, xDer - 12, yCond);
 
-        // Badge celeste "ORIGINAL"
-        cs.setNonStrokingColor(0.85f, 0.92f, 0.99f);
-        fillRoundedRect(cs, xDer - 12 - wEstado, yCond - 3, wEstado, 12f, 3f);
-        cs.setNonStrokingColor(0.1f, 0.35f, 0.75f);
-        drawCenteredText(cs, fontCond, fsCond, estado, xDer - 12 - wEstado / 2f, yCond);
 
-        // ================= 3. CAJA CLIENTE / DETALLE =================
+
+        // ================= 3. CAJA CLIENTE / DETALLE (solo contorno, sin relleno) =================
         float yCajaTop = yBase - 55;
         float yCajaBottom = yBase - 78;
-        cs.setNonStrokingColor(0.97f, 0.97f, 0.97f);
-        cs.setStrokingColor(0.88f, 0.88f, 0.88f);
+        cs.setStrokingColor(0.75f, 0.75f, 0.75f);
         cs.setLineWidth(0.5f);
-        fillRoundedRect(cs, margenIzq + 8, yCajaBottom, anchoTotal - 16, yCajaTop - yCajaBottom, 4f);
+        drawRoundedRect(cs, margenIzq + 8, yCajaBottom, anchoTotal - 16, yCajaTop - yCajaBottom, 4f);
         cs.stroke();
 
         String detalle = "Entrega de mercadería correspondiente al pedido adjunto."; // <-- reemplazar por p.getDetalle() si existe
@@ -221,14 +213,13 @@ public class Duplicados extends AppCompatActivity {
         // ================= 6. BADGE ÍTEMS TOTALES + TOTAL A PAGAR =================
         float yFooterBox = yBase - altoFijo + 55;
 
-        // Badge gris "N Ítems Totales"
+        // Badge "N Ítems Totales" — solo contorno, sin relleno
         String textoItems = productos.size() + " Ítems Totales";
         float fsItems = 8f;
         float wItems = PDType1Font.HELVETICA_BOLD.getStringWidth(textoItems) / 1000f * fsItems + 16;
-        cs.setNonStrokingColor(0.94f, 0.94f, 0.94f);
-        cs.setStrokingColor(0.85f, 0.85f, 0.85f);
+        cs.setStrokingColor(0.6f, 0.6f, 0.6f);
         cs.setLineWidth(0.5f);
-        fillRoundedRect(cs, margenIzq + 8, yFooterBox, wItems, 18f, 4f);
+        drawRoundedRect(cs, margenIzq + 8, yFooterBox, wItems, 18f, 4f);
         cs.stroke();
         cs.setNonStrokingColor(0.2f, 0.2f, 0.2f);
         drawCenteredText(cs, PDType1Font.HELVETICA_BOLD, fsItems, textoItems, margenIzq + 8 + wItems / 2f, yFooterBox + 6);
