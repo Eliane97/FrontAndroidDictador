@@ -197,7 +197,7 @@ public class ListaPreciosActivity extends AppCompatActivity {
                 175, 176, 174, 173, 179, 178, 177, 180, 181, 398
         ));
         codigosTrio = new HashSet<>(Arrays.asList(
-                520, 519, 441, 443, 523, 524, 522, 525, 442, 518, 521, 440, 444
+                520, 519, 441, 443, 523, 524, 522, 525, 442, 518, 521, 440, 444,567,566,564,575,574
         ));
         codigosCigarrillos = new HashSet<>(Arrays.asList(
                 337, 339, 338, 334, 335, 336, 10, 8, 210, 211, 6, 352, 465, 343, 350, 349, 386, 345,

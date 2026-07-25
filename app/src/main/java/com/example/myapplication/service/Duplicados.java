@@ -1,32 +1,33 @@
 package com.example.myapplication.service;
 
 
-        import android.content.Intent;
-        import android.net.Uri;
-        import android.os.Bundle;
-        import android.util.Log;
-        import android.widget.TextView;
-        import android.widget.Toast;
-        import androidx.activity.result.ActivityResultLauncher;
-        import androidx.activity.result.contract.ActivityResultContracts;
-        import androidx.appcompat.app.AppCompatActivity;
-        import androidx.core.content.FileProvider;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
 
-        import com.example.myapplication.R;
-        import com.example.myapplication.model.PedidoModel;
-        import com.example.myapplication.model.ProductoModel;
-        import com.example.myapplication.service.PDFParser;
-        import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
-        import com.tom_roush.pdfbox.pdmodel.PDDocument;
-        import com.tom_roush.pdfbox.pdmodel.PDPage;
-        import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
-        import com.tom_roush.pdfbox.pdmodel.font.PDFont;
-        import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
-        import java.io.File;
-        import java.io.IOException;
-        import java.io.InputStream;
-        import java.util.List;
+import com.example.myapplication.R;
+import com.example.myapplication.model.PedidoModel;
+import com.example.myapplication.model.ProductoModel;
+import com.example.myapplication.service.PDFParser;
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+import com.tom_roush.pdfbox.pdmodel.PDDocument;
+import com.tom_roush.pdfbox.pdmodel.PDPage;
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream;
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle;
+import com.tom_roush.pdfbox.pdmodel.font.PDFont;
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 public class Duplicados extends AppCompatActivity {
     private TextView txtResultado;
@@ -69,20 +70,43 @@ public class Duplicados extends AppCompatActivity {
         File downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
         File file = new File(downloadsDir, "Remitos.pdf");
 
+        // ===== Cálculo de mitades de hoja con el MISMO margen para ambos remitos =====
+        float pageWidth = PDRectangle.LETTER.getWidth();
+        float pageHeight = PDRectangle.LETTER.getHeight();
+        float margenV = 20f; // margen vertical: respecto al borde de la hoja Y respecto a la línea central
+
+        float mitadHoja = pageHeight / 2f;
+        // Cada remito ocupa exactamente la mitad de la hoja, descontando su margen arriba/abajo
+        float altoRemito = mitadHoja - (2 * margenV);
+
+        // Techo (yBase) de cada remito: a "margenV" del borde superior de su mitad de hoja
+        float yBaseSuperior = pageHeight - margenV;      // margen respecto al borde superior de la hoja
+        float yBaseInferior = mitadHoja - margenV;       // mismo margen, pero respecto a la línea central
+
+        int totalPaginas = (int) Math.ceil(listaPedidos.size() / 2.0);
+
         try (PDDocument document = new PDDocument()) {
+            int numeroPagina = 0;
             for (int i = 0; i < listaPedidos.size(); i += 2) {
-                PDPage page = new PDPage();
+                PDPage page = new PDPage(PDRectangle.LETTER);
                 document.addPage(page);
+                numeroPagina++;
+
                 try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
                     // Remito Superior
-                    dibujarRemito(cs, listaPedidos.get(i), 780);
+                    dibujarRemito(cs, listaPedidos.get(i), yBaseSuperior, altoRemito);
 
                     // Remito Inferior (si hay otro)
                     if (i + 1 < listaPedidos.size()) {
-                        dibujarRemito(cs, listaPedidos.get(i + 1), 420);
+                        dibujarRemito(cs, listaPedidos.get(i + 1), yBaseInferior, altoRemito);
                     }
-                }
-            }
+
+                    // Línea de corte al medio de la hoja
+                    dibujarLineaCorte(cs, pageWidth, mitadHoja);
+
+                    // Numeración de página
+                    dibujarNumeroPagina(cs, pageWidth, numeroPagina, totalPaginas);
+            }}
             document.save(file);
             compartirArchivo(file);
         } catch (Exception e) {
@@ -91,10 +115,9 @@ public class Duplicados extends AppCompatActivity {
         }
     }
 
-    private void dibujarRemito(PDPageContentStream cs, PedidoModel p, int yBase) throws Exception {
+    private void dibujarRemito(PDPageContentStream cs, PedidoModel p, float yBase, float altoFijo) throws Exception {
         int margenIzq = 40;
         int anchoTotal = 520;
-        int altoFijo = 350; // Siempre la mitad de la hoja
 
         float xDer = margenIzq + anchoTotal;
 
@@ -188,7 +211,7 @@ public class Duplicados extends AppCompatActivity {
         cs.setNonStrokingColor(0.15f, 0.15f, 0.15f);
 
         for (ProductoModel prod : productos) {
-             // <-- requiere getCodigo() en ProductoModel
+            // <-- requiere getCodigo() en ProductoModel
             String sCant = String.valueOf(prod.getCantidad());
             String sDesc = prod.getDescripcion();
             String sUnit = "$" + prod.getPrecioUnitario();
@@ -302,6 +325,14 @@ public class Duplicados extends AppCompatActivity {
         cs.showText(text);
         cs.endText();
     }
+
+    private void dibujarNumeroPagina(PDPageContentStream cs, float pageWidth, int numeroPagina, int totalPaginas) throws IOException {
+        String texto = "Página " + numeroPagina + " de " + totalPaginas;
+        cs.setNonStrokingColor(0.45f, 0.45f, 0.45f);
+        drawCenteredText(cs, PDType1Font.HELVETICA, 7, texto, pageWidth / 2f, 8f);
+        cs.setNonStrokingColor(0f, 0f, 0f);
+    }
+
     private void compartirArchivo(File file) {
         // Fíjate que ahora termina en .fileprovider para coincidir con tu manifiesto
         Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
@@ -311,5 +342,15 @@ public class Duplicados extends AppCompatActivity {
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(Intent.createChooser(intent, "Enviar Remitos"));
+    }
+    private void dibujarLineaCorte(PDPageContentStream cs, float pageWidth, float y) throws IOException {
+        cs.setStrokingColor(0.6f, 0.6f, 0.6f);
+        cs.setLineWidth(0.5f);
+        cs.setLineDashPattern(new float[]{4f, 4f}, 0f);
+        cs.moveTo(15f, y);
+        cs.lineTo(pageWidth - 15f, y);
+        cs.stroke();
+        cs.setLineDashPattern(new float[]{}, 0f); // vuelve a línea sólida para lo que sigue
+        cs.setStrokingColor(0f, 0f, 0f);
     }
 }

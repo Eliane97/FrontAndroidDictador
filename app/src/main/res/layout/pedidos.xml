@@ -7,6 +7,7 @@
     android:background="@drawable/fondo"
     tools:context=".service.Pedidos">
 
+    <!-- Capa Oscura Overlay -->
     <View
         android:id="@+id/view2"
         android:layout_width="match_parent"
@@ -17,12 +18,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- BARRA SUPERIOR (HEADER) -->
     <ImageButton
         android:id="@+id/btn_back"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Volver atrás"
         android:padding="16dp"
@@ -31,30 +33,13 @@
         app:layout_constraintTop_toTopOf="parent"
         app:tint="@color/white" />
 
-    <ImageButton
-        android:id="@+id/btn_more_options"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Más opciones"
-        android:padding="16dp"
-        android:src="@android:drawable/ic_menu_sort_by_size"
-        app:layout_constraintBottom_toTopOf="@+id/btn_import"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.783"
-        app:layout_constraintStart_toEndOf="@+id/tv_playing_now"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0"
-        app:tint="@color/white" />
-
     <TextView
         android:id="@+id/tv_playing_now"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:gravity="center"
         android:letterSpacing="0.1"
-        android:text="PLAYING NOW"
+        android:text="MODO REPRODUCTOR"
         android:textColor="@color/white"
         android:textSize="14sp"
         android:textStyle="bold"
@@ -63,20 +48,44 @@
         app:layout_constraintStart_toEndOf="@+id/btn_back"
         app:layout_constraintTop_toTopOf="@+id/btn_back" />
 
+    <!-- Botón Importar PDF -->
     <ImageButton
         android:id="@+id/btn_import"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="336dp"
-        android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Importar archivo"
-        android:padding="16dp"
+        android:padding="12dp"
         android:src="@drawable/ic_import"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_back"
+        app:layout_constraintEnd_toStartOf="@+id/btn_more_options"
+        app:layout_constraintTop_toTopOf="@+id/btn_back"
         app:tint="@color/white" />
 
+    <!-- Botón Menú / Lista de Clientes -->
+    <ImageButton
+        android:id="@+id/btn_more_options"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Más opciones"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_sort_by_size"
+        app:layout_constraintBottom_toBottomOf="@+id/btn_back"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/btn_back"
+        app:tint="@color/white" />
+
+    <!-- GUÍA HORIZONTAL DE REFERENCIA -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.42" />
+
+    <!-- CONTENEDOR CENTRAL (Micrófono / Gráfico) -->
     <FrameLayout
         android:id="@+id/artist_image_container"
         android:layout_width="wrap_content"
@@ -84,135 +93,192 @@
         app:layout_constraintBottom_toTopOf="@+id/guideline_center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tv_playing_now"
-        app:layout_constraintVertical_bias="0.6">
+        app:layout_constraintTop_toBottomOf="@+id/tv_playing_now">
 
         <ImageView
             android:id="@+id/artist_image"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
             android:layout_gravity="center"
             android:background="@drawable/circle_background"
             android:clipToOutline="true"
             android:scaleType="centerCrop" />
 
         <View
-            android:layout_width="230dp"
-            android:layout_height="230dp"
+            android:layout_width="210dp"
+            android:layout_height="210dp"
             android:layout_gravity="center"
             android:background="@drawable/circle_progress_track" />
 
         <View
-            android:layout_width="230dp"
-            android:layout_height="230dp"
+            android:layout_width="210dp"
+            android:layout_height="210dp"
             android:layout_gravity="center"
             android:background="@drawable/circle_progress_fill" />
 
         <ImageView
             android:id="@+id/imageView3"
-            android:layout_width="176dp"
-            android:layout_height="165dp"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
             android:layout_gravity="center"
             app:srcCompat="@drawable/baseline_mic_24" />
 
     </FrameLayout>
 
+    <!-- ======================================================= -->
+    <!-- SECCIÓN DEL CLIENTE CON BOTONES A LOS LADOS             -->
+    <!-- ======================================================= -->
 
+    <!-- Botón Cliente Anterior (Izquierda de nombreCliente) -->
+    <ImageButton
+        android:id="@+id/btn_prev_client"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Cliente anterior"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_media_rew"
+        app:layout_constraintBottom_toBottomOf="@+id/nombreCliente"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/nombreCliente"
+        app:tint="@color/white" />
+
+    <!-- Nombre del Cliente (Centro) -->
     <TextView
         android:id="@+id/nombreCliente"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:gravity="center"
         android:text="Cliente"
         android:textColor="@color/white"
-        android:textSize="28sp"
+        android:textSize="24sp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@+id/textoCliente"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/guideline_center"
-        app:layout_constraintVertical_bias="0.555" />
+        app:layout_constraintEnd_toStartOf="@+id/btn_next_client"
+        app:layout_constraintStart_toEndOf="@+id/btn_prev_client"
+        app:layout_constraintTop_toBottomOf="@+id/guideline_center" />
 
-    <TextView
-        android:id="@+id/textoCliente"
+    <!-- Botón Cliente Siguiente (Derecha de nombreCliente) -->
+    <ImageButton
+        android:id="@+id/btn_next_client"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="48dp"
+        android:layout_marginEnd="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Cliente siguiente"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_media_ff"
+        app:layout_constraintBottom_toBottomOf="@+id/nombreCliente"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/nombreCliente"
+        app:tint="@color/white" />
+
+    <!-- Información del producto actual -->
+    <TextView
+        android:id="@+id/textoCliente"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="32dp"
+        android:gravity="center"
         android:text="Producto"
         android:textColor="@color/text_light_gray"
         android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@+id/control_buttons_layout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/nombreCliente" />
+
+    <!-- Botón Repetir (Posicionado junto al producto) -->
+
+    <!-- Botón Reportar Faltante (Alert / Warning) -->
+    <!-- ======================================================= -->
+    <!-- BOTONERA INFERIOR (3 BOTONES: Anterior, Play, Siguiente)-->
+    <!-- ======================================================= -->
 
     <ImageButton
-        android:id="@+id/btn_repetir"
-        android:layout_width="54dp"
-        android:layout_height="64dp"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="8dp"
+        android:id="@+id/btn_ver_lista"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Repetir Pedido"
+        android:contentDescription="Ver lista de productos"
         android:padding="8dp"
-        android:src="@drawable/ic_replay"
+        android:src="@android:drawable/ic_menu_agenda"
         app:layout_constraintBottom_toBottomOf="@+id/textoCliente"
-        app:layout_constraintEnd_toStartOf="@+id/textoCliente"
-        app:layout_constraintHorizontal_bias="0.063"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/textoCliente"
         app:layout_constraintVertical_bias="0.0"
         app:tint="@color/white" />
+
+    <ImageButton
+        android:id="@+id/btn_faltante"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="60dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Reportar Faltante"
+        android:padding="8dp"
+        android:src="@android:drawable/ic_dialog_alert"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.044"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textoCliente"
+        app:layout_constraintVertical_bias="0.372"
+        app:tint="#FF9800" />
 
     <LinearLayout
         android:id="@+id/control_buttons_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="164dp"
         android:gravity="center"
         android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.45"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/guideline_center">
+        app:layout_constraintTop_toBottomOf="@+id/textoCliente"
+        app:layout_constraintVertical_bias="0.19">
 
+        <!-- Producto / Ítem Anterior -->
         <ImageButton
             android:id="@+id/btn_previous"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="20dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Canción anterior"
+            android:contentDescription="Artículo anterior"
             android:padding="16dp"
             android:src="@drawable/ic_previous"
             app:tint="@color/white" />
 
+        <!-- Reproducir / Pausar -->
         <ImageButton
             android:id="@+id/btn_play_pause"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
             android:background="@drawable/circle_play_button"
             android:contentDescription="Reproducir/Pausar"
-            android:padding="20dp"
+            android:padding="18dp"
             android:src="@drawable/ic_play"
             app:tint="@color/background_dark" />
 
+        <!-- Producto / Ítem Siguiente -->
         <ImageButton
             android:id="@+id/btn_next"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="20dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Siguiente canción"
+            android:contentDescription="Siguiente artículo"
             android:padding="16dp"
             android:src="@drawable/ic_next"
             app:tint="@color/white" />
-    </LinearLayout>
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline_center"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.45" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

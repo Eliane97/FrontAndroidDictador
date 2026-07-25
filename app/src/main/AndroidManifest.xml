@@ -67,6 +67,7 @@
         <activity
             android:name=".service.Pedidos"
             android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.MyApplication" />
     </application>
 

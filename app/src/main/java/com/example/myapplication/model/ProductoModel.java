@@ -5,8 +5,7 @@ package com.example.myapplication.model; // Mantenemos tu paquete original
 // import com.google.gson.annotations.SerializedName;
 
 public class ProductoModel {
-    // Ya no es necesaria la anotación si no se usa Gson
-    // @SerializedName("cantidad")
+
     private int cantidad;
     // @SerializedName("descripcion")
     private String descripcion;
@@ -14,6 +13,7 @@ public class ProductoModel {
     private String precioUnitario;
     private String precioTotaldelProducto;
     private String categoria;
+    private int codigo;
 
     public String getPrecioUnitario() {
         return precioUnitario;
@@ -49,7 +49,7 @@ public class ProductoModel {
         this.codigo = codigo;
     }
 
-    private int codigo;
+
     // Constructor añadido para facilitar la creación desde el parser
     public ProductoModel(int cantidad, String descripcion) {
         this.cantidad = cantidad;
